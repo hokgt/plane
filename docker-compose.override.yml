@@ -1,0 +1,42 @@
+services:
+  # API service - add SECRET_KEY environment variable
+  api:
+    environment:
+      SECRET_KEY: "MgGAkqKan7P6a+OQ/9MlhO1XGJb2auPcNDuotNmyg+o="
+
+  # Worker service - add SECRET_KEY environment variable
+  worker:
+    environment:
+      SECRET_KEY: "MgGAkqKan7P6a+OQ/9MlhO1XGJb2auPcNDuotNmyg+o="
+
+  # Beat Worker service - add SECRET_KEY environment variable
+  beat-worker:
+    environment:
+      SECRET_KEY: "MgGAkqKan7P6a+OQ/9MlhO1XGJb2auPcNDuotNmyg+o="
+
+  # Nginx Proxy - map to host port 8001 (Plane Web/API access)
+  proxy:
+    ports:
+      - "8001:80"
+
+  # PostgreSQL - map to host port 5432
+  plane-db:
+    ports:
+      - "5432:5432"
+
+  # Redis - map to host port 6379
+  plane-redis:
+    ports:
+      - "6379:6379"
+
+  # RabbitMQ - map AMQP and Management UI ports
+  plane-mq:
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI port
+
+  # MinIO - map S3 API and Console UI ports
+  plane-minio:
+    ports:
+      - "9000:9000"    # S3 API port
+      - "9001:9090"    # Console UI port (internal 9090 -> host 9001)
