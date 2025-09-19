@@ -1,0 +1,56 @@
+---
+globs: *.tsx,*.css,*.scss
+---
+
+# Styling and Tailwind CSS Rules
+
+## Tailwind CSS Standards
+- Use Tailwind CSS for all styling
+- Follow the design system defined in `@plane/propel`
+- Use `clsx` and `tailwind-merge` for conditional classes
+- Prefer utility classes over custom CSS
+
+## Class Organization
+```typescript
+import { clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+const buttonClasses = clsx(
+  "px-4 py-2 rounded-md font-medium",
+  "bg-blue-500 text-white",
+  "hover:bg-blue-600 focus:ring-2 focus:ring-blue-500",
+  "disabled:opacity-50 disabled:cursor-not-allowed",
+  isActive && "bg-blue-700",
+  twMerge(className) // Allow override classes
+);
+```
+
+## Component Styling Patterns
+- Use consistent spacing scale (4, 8, 12, 16, 24, 32, 48, 64)
+- Follow the color palette from the design system
+- Use semantic color names when possible
+- Implement proper focus states for accessibility
+
+## Responsive Design
+```typescript
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {/* Responsive grid */}
+</div>
+```
+
+## Dark Mode Support
+- Use `next-themes` for theme management
+- Implement dark mode variants using `dark:` prefix
+- Test components in both light and dark modes
+
+## Custom CSS
+- Minimize custom CSS in favor of Tailwind utilities
+- Use CSS modules only when necessary
+- Place global styles in `styles/globals.css`
+- Use CSS custom properties for dynamic values
+
+## Design System Integration
+- Import components from `@plane/ui` and `@plane/propel`
+- Follow established component patterns
+- Use consistent typography scale
+- Implement proper loading and error states

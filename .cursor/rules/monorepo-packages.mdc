@@ -1,0 +1,54 @@
+---
+globs: packages/**/*,apps/*/package.json
+---
+
+# Monorepo Package Management Rules
+
+## Package Structure
+Plane uses a monorepo with shared packages under `packages/` and applications under `apps/`.
+
+## Shared Package Guidelines
+- All shared packages use the `@plane/` namespace
+- Packages are built with `tsup` for optimal bundling
+- Each package has its own `package.json` with proper exports
+- Use `"private": true` for internal packages
+
+## Package Dependencies
+- Apps depend on shared packages using `"*"` version (workspace references)
+- Shared packages can depend on other shared packages
+- Avoid circular dependencies between packages
+- Use peer dependencies for React in UI packages
+
+## Build System
+- Use Turborepo for build orchestration
+- Each package has `build`, `dev`, `check:lint`, `check:types` scripts
+- Build outputs go to `dist/` directory
+- Use `tsup` for TypeScript compilation and bundling
+
+## Package Development
+```json
+{
+  "scripts": {
+    "build": "tsup --minify",
+    "dev": "tsup --watch",
+    "check:lint": "eslint . --max-warnings X",
+    "check:types": "tsc --noEmit"
+  }
+}
+```
+
+## Key Packages
+- **`@plane/ui`**: Shared UI components with Storybook
+- **`@plane/types`**: TypeScript definitions
+- **`@plane/services`**: API service layer
+- **`@plane/constants`**: Application constants
+- **`@plane/utils`**: Utility functions
+
+## Import Patterns
+```typescript
+// Import from shared packages
+import { Button } from "@plane/ui";
+import { API_BASE_URL } from "@plane/constants";
+import { formatDate } from "@plane/utils";
+import type { User } from "@plane/types";
+```

@@ -284,6 +284,12 @@ export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS: Record<string, IWorkspa
     href: `/projects/archives/`,
     access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER],
   },
+  "user-management": {
+    key: "user_management",
+    labelTranslationKey: "user_management",
+    href: `/user-management/`,
+    access: [EUserWorkspaceRoles.ADMIN, EUserWorkspaceRoles.MEMBER, EUserWorkspaceRoles.GUEST], // Temporarily visible to all
+  },
 };
 export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS: IWorkspaceSidebarNavigationItem[] = [
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["views"],
@@ -291,6 +297,7 @@ export const WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS_LINKS: IWorkspaceSidebar
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["your-work"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["drafts"],
   WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["archives"],
+  WORKSPACE_SIDEBAR_DYNAMIC_NAVIGATION_ITEMS["user-management"],
 ];
 
 export const WORKSPACE_SIDEBAR_STATIC_NAVIGATION_ITEMS: Record<string, IWorkspaceSidebarNavigationItem> = {

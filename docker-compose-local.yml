@@ -63,48 +63,58 @@ services:
     ports:
       - "5432:5432"
 
-  # web:
-  #   build:
-  #     context: .
-  #     dockerfile: ./web/Dockerfile.dev
-  #   restart: unless-stopped
-  #   networks:
-  #     - dev_env
-  #   volumes:
-  #     - ./web:/app/web
-  #   env_file:
-  #     - ./web/.env
-  #   depends_on:
-  #     - api
-  #     - worker
+  web:
+    build:
+      context: .
+      dockerfile: ./apps/web/Dockerfile.dev
+    restart: unless-stopped
+    networks:
+      - dev_env
+    volumes:
+      - ./apps/web:/app/web
+    env_file:
+      - ./apps/web/.env
+    depends_on:
+      - api
+      - worker
+    ports:
+      - "3000:3000"
 
-  # space:
-  #   build:
-  #     context: .
-  #     dockerfile: ./space/Dockerfile.dev
-  #   restart: unless-stopped
-  #   networks:
-  #     - dev_env
-  #   volumes:
-  #     - ./space:/app/space
-  #   depends_on:
-  #     - api
-  #     - worker
-  #     - web
+  space:
+    build:
+      context: .
+      dockerfile: ./apps/space/Dockerfile.dev
+    restart: unless-stopped
+    networks:
+      - dev_env
+    volumes:
+      - ./apps/space:/app/space
+    env_file:
+      - ./apps/space/.env
+    depends_on:
+      - api
+      - worker
+      - web
+    ports:
+      - "3002:3002"
 
-  # admin:
-  #   build:
-  #     context: .
-  #     dockerfile: ./admin/Dockerfile.dev
-  #   restart: unless-stopped
-  #   networks:
-  #     - dev_env
-  #   volumes:
-  #     - ./admin:/app/admin
-  #   depends_on:
-  #     - api
-  #     - worker
-  #     - web
+  admin:
+    build:
+      context: .
+      dockerfile: ./apps/admin/Dockerfile.dev
+    restart: unless-stopped
+    networks:
+      - dev_env
+    volumes:
+      - ./apps/admin:/app/admin
+    env_file:
+      - ./apps/admin/.env
+    depends_on:
+      - api
+      - worker
+      - web
+    ports:
+      - "3001:3001"
 
   # live:
   #   build:
@@ -134,6 +144,11 @@ services:
     command: ./bin/docker-entrypoint-api-local.sh
     env_file:
       - ./apps/api/.env
+    environment:
+      - APP_BASE_URL=http://localhost:3000
+      - WEB_URL=http://localhost:3000
+      - RABBITMQ_HOST=plane-mq
+      - RABBITMQ_PORT=5672
     depends_on:
       - plane-db
       - plane-redis

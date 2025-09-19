@@ -1,0 +1,95 @@
+---
+globs: apps/*/core/components/**/*.tsx,packages/ui/src/**/*.tsx
+---
+
+# Component Development Patterns
+
+## Component Architecture
+Plane uses a component-based architecture with shared UI components and app-specific components.
+
+## Component Categories
+- **UI Components** (`@plane/ui`): Reusable, styled components
+- **Core Components** (`apps/*/core/components`): Business logic components
+- **Page Components** (`apps/*/app`): Route-specific components
+
+## Component Structure
+```typescript
+import React from "react";
+import { observer } from "mobx-react-lite";
+import { cn } from "@plane/utils";
+
+interface ComponentProps {
+  className?: string;
+  children?: React.ReactNode;
+  // Other props
+}
+
+export const Component: React.FC<ComponentProps> = observer(({
+  className,
+  children,
+  ...props
+}) => {
+  return (
+    <div className={cn("base-styles", className)} {...props}>
+      {children}
+    </div>
+  );
+});
+```
+
+## State Management Patterns
+- Use MobX stores for complex state
+- Use `observer` HOC for reactive components
+- Prefer local state for simple component state
+- Use SWR for server state
+
+## Styling Patterns
+```typescript
+import { cn } from "@plane/utils";
+
+const Component = ({ className, variant = "default" }) => {
+  return (
+    <div
+      className={cn(
+        "base-classes",
+        {
+          "variant-primary": variant === "primary",
+          "variant-secondary": variant === "secondary",
+        },
+        className
+      )}
+    />
+  );
+};
+```
+
+## Props Patterns
+- Use discriminated unions for variant props
+- Provide sensible defaults
+- Use proper TypeScript interfaces
+- Implement proper prop validation
+
+## Event Handling
+```typescript
+const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+  event.preventDefault();
+  // Handle click
+};
+
+const handleSubmit = (data: FormData) => {
+  // Handle form submission
+};
+```
+
+## Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation
+- Test with screen readers
+- Use proper focus management
+
+## Performance
+- Use `React.memo` for expensive components
+- Implement proper key props for lists
+- Use `useCallback` and `useMemo` appropriately
+- Avoid unnecessary re-renders

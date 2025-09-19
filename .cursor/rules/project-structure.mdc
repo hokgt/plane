@@ -1,0 +1,50 @@
+---
+alwaysApply: true
+---
+
+# Plane Project Structure Guide
+
+Plane is an open-source project management tool built with a modern monorepo architecture. This guide helps navigate the codebase structure.
+
+## Architecture Overview
+
+Plane uses a **monorepo architecture** with multiple applications and shared packages:
+
+### Applications (`apps/`)
+- **`web/`** - Main Next.js frontend application (port 3000)
+- **`space/`** - Documentation/knowledge base app (port 3002) 
+- **`admin/`** - Admin interface (port 3001)
+- **`api/`** - Django REST API backend
+- **`live/`** - Real-time collaboration server (Node.js)
+- **`proxy/`** - Caddy reverse proxy configuration
+
+### Shared Packages (`packages/`)
+- **`@plane/ui`** - Shared UI components library
+- **`@plane/types`** - TypeScript type definitions
+- **`@plane/services`** - API service layer
+- **`@plane/constants`** - Application constants
+- **`@plane/hooks`** - Custom React hooks
+- **`@plane/utils`** - Utility functions
+- **`@plane/editor`** - Rich text editor components
+- **`@plane/i18n`** - Internationalization
+- **`@plane/propel`** - Design system components
+
+## Key Files
+- [package.json](mdc:package.json) - Root package configuration with workspaces
+- [turbo.json](mdc:turbo.json) - Turborepo build configuration
+- [docker-compose.yml](mdc:docker-compose.yml) - Development environment setup
+- [apps/web/next.config.js](mdc:apps/web/next.config.js) - Next.js configuration
+
+## Development Workflow
+- Use `yarn dev` to start all applications
+- Each app has its own package.json with specific dependencies
+- Shared packages are built and linked automatically
+- Turbo handles build orchestration and caching
+
+## Technology Stack
+- **Frontend**: Next.js 14, React 18, TypeScript, Tailwind CSS
+- **Backend**: Django REST Framework, Python
+- **State Management**: MobX
+- **Build System**: Turborepo, tsup
+- **Styling**: Tailwind CSS, Headless UI
+- **Real-time**: WebSockets (Node.js server)

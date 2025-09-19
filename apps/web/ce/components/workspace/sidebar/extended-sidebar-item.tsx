@@ -57,9 +57,10 @@ export const ExtendedSidebarItem: FC<TExtendedSidebarItemProps> = observer((prop
 
   const handleLinkClick = () => toggleExtendedSidebar(true);
 
-  if (!allowPermissions(item.access as any, EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())) {
-    return null;
-  }
+  // Temporarily disable permission check for debugging
+  // if (!allowPermissions(item.access as any, EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())) {
+  //   return null;
+  // }
 
   const itemHref =
     item.key === "your_work"

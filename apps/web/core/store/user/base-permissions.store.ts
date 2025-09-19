@@ -183,6 +183,16 @@ export abstract class BaseUserPermissionStore implements IBaseUserPermissionStor
     if (!workspaceSlug) workspaceSlug = currentWorkspaceSlug;
     if (!projectId) projectId = currentProjectId;
 
+    // Check system-level admin role first
+    const currentUser = this.store.user.data;
+    if (currentUser?.user_role === 'admin') {
+      if (onPermissionAllowed) {
+        return onPermissionAllowed();
+      } else {
+        return true;
+      }
+    }
+
     let currentUserRole: TUserPermissions | undefined = undefined;
 
     if (level === EUserPermissionsLevel.WORKSPACE) {

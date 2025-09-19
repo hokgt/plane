@@ -45,6 +45,7 @@ export interface IUser extends IUserLite {
   username: string;
   last_login_medium: TLoginMediums;
   theme: IUserTheme;
+  user_role: 'admin' | 'staff' | 'user';
 }
 
 export interface IUserAccount {

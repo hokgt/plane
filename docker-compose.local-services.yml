@@ -1,0 +1,79 @@
+# Docker compose file for running only the backend services locally
+# This allows frontend apps to run natively for faster development
+version: "3.8"
+
+services:
+  # PostgreSQL Database
+  plane-db:
+    container_name: plane-db
+    image: postgres:15.7-alpine
+    restart: unless-stopped
+    command: postgres -c 'max_connections=1000'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: plane
+      POSTGRES_DB: plane
+      POSTGRES_PASSWORD: plane
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - dev_env
+
+  # Redis Cache
+  plane-redis:
+    container_name: plane-redis
+    image: valkey/valkey:7.2.5-alpine
+    restart: unless-stopped
+    volumes:
+      - redisdata:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - dev_env
+
+  # RabbitMQ Message Queue
+  plane-mq:
+    container_name: plane-mq
+    image: rabbitmq:3.13.6-management-alpine
+    restart: unless-stopped
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: plane
+      RABBITMQ_DEFAULT_PASS: plane
+      RABBITMQ_DEFAULT_VHOST: plane
+    ports:
+      - "5672:5672"    # AMQP port
+      - "15672:15672"  # Management UI port
+    networks:
+      - dev_env
+
+  # MinIO S3 Storage
+  plane-minio:
+    container_name: plane-minio
+    image: minio/minio
+    restart: unless-stopped
+    command: server /export --console-address ":9090"
+    volumes:
+      - uploads:/export
+    environment:
+      MINIO_ROOT_USER: plane
+      MINIO_ROOT_PASSWORD: plane123
+    ports:
+      - "9000:9000"    # S3 API port
+      - "9090:9090"    # Console UI port
+    networks:
+      - dev_env
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:
+  rabbitmq_data:
+
+networks:
+  dev_env:
+    driver: bridge
+

@@ -113,6 +113,7 @@ export class UserStore implements IUserStore {
         this.error = undefined;
       });
       const user = await this.userService.currentUser();
+      
       if (user && user?.id) {
         await Promise.all([
           this.userProfile.fetchUserProfile(),

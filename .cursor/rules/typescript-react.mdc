@@ -1,0 +1,53 @@
+---
+globs: *.ts,*.tsx
+---
+
+# TypeScript and React Development Rules
+
+## TypeScript Standards
+- Always use TypeScript strict mode
+- Prefer `interface` over `type` for object shapes
+- Use proper type annotations for function parameters and return types
+- Leverage the shared `@plane/types` package for consistent typing
+- Use generic types when appropriate for reusable components
+
+## React Best Practices
+- Use functional components with hooks
+- Prefer `const` over `let` for component declarations
+- Use proper dependency arrays in `useEffect` and `useMemo`
+- Implement proper error boundaries
+- Use React.memo for performance optimization when needed
+
+## Component Structure
+```typescript
+interface ComponentProps {
+  // Define props interface
+}
+
+const Component: React.FC<ComponentProps> = ({ prop1, prop2 }) => {
+  // Component logic
+  return (
+    // JSX
+  );
+};
+
+export default Component;
+```
+
+## Import Organization
+1. React and Next.js imports
+2. Third-party libraries
+3. Internal packages (`@plane/*`)
+4. Relative imports
+5. Type-only imports last
+
+## State Management
+- Use MobX for complex state management
+- Prefer local state with `useState` for simple component state
+- Use SWR for server state management
+- Follow the established store patterns in `apps/*/core/store/`
+
+## File Naming
+- Use PascalCase for component files: `UserProfile.tsx`
+- Use camelCase for utility files: `formatDate.ts`
+- Use kebab-case for pages: `user-settings.tsx`

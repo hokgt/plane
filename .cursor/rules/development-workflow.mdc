@@ -1,0 +1,51 @@
+---
+description: Development workflow and best practices for Plane project
+---
+
+# Development Workflow and Best Practices
+
+## Getting Started
+1. Install dependencies: `yarn install`
+2. Start development: `yarn dev` (starts all apps)
+3. Individual apps: `yarn dev --filter=web` (for specific app)
+
+## Code Quality Standards
+- **Linting**: ESLint with custom `@plane/eslint-config`
+- **Formatting**: Prettier with Tailwind plugin
+- **Type Checking**: TypeScript strict mode
+- **Testing**: Jest for unit tests, Playwright for E2E
+
+## Git Workflow
+- Use conventional commits: `feat:`, `fix:`, `docs:`, `refactor:`
+- Create feature branches from `main`
+- Submit pull requests for all changes
+- Ensure CI checks pass before merging
+
+## Build and Deployment
+- **Development**: `yarn dev` for local development
+- **Build**: `yarn build` for production builds
+- **Docker**: Use provided Dockerfiles for containerization
+- **CI/CD**: Automated testing and deployment
+
+## Environment Configuration
+- Use `.env` files for environment variables
+- Follow the environment variable patterns in [turbo.json](mdc:turbo.json)
+- Use proper secrets management for production
+
+## Performance Considerations
+- Use Next.js optimizations (Image, Font, Bundle Analyzer)
+- Implement proper code splitting
+- Use SWR for efficient data fetching
+- Optimize bundle size with proper imports
+
+## Debugging
+- Use React DevTools for component debugging
+- Use Django Debug Toolbar for API debugging
+- Implement proper error boundaries
+- Use structured logging
+
+## Documentation
+- Write clear component documentation
+- Use JSDoc for function documentation
+- Update README files for significant changes
+- Document API endpoints with proper examples

@@ -1,0 +1,75 @@
+---
+globs: apps/api/**/*.py
+---
+
+# Django API Development Rules
+
+## Django Project Structure
+The API is located in `apps/api/` and follows Django best practices with a modular structure.
+
+## Key Directories
+- **`plane/`** - Main Django project
+- **`plane/api/`** - API views and serializers
+- **`plane/db/`** - Database models
+- **`plane/authentication/`** - Authentication logic
+- **`plane/app/`** - Core application logic
+- **`plane/bgtasks/`** - Background tasks
+- **`plane/utils/`** - Utility functions
+
+## API Development Standards
+- Use Django REST Framework for API endpoints
+- Follow RESTful conventions for URL patterns
+- Implement proper serializers for data validation
+- Use class-based views with proper HTTP methods
+- Implement proper error handling and status codes
+
+## Model Guidelines
+```python
+class ExampleModel(models.Model):
+    """Model docstring explaining purpose."""
+    
+    # Use descriptive field names
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = "example_model"
+        ordering = ["-created_at"]
+```
+
+## View Patterns
+```python
+class ExampleViewSet(viewsets.ModelViewSet):
+    """ViewSet for managing examples."""
+    
+    queryset = ExampleModel.objects.all()
+    serializer_class = ExampleSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        # Custom queryset logic
+        return super().get_queryset()
+```
+
+## Serializer Standards
+```python
+class ExampleSerializer(serializers.ModelSerializer):
+    """Serializer for Example model."""
+    
+    class Meta:
+        model = ExampleModel
+        fields = "__all__"
+        read_only_fields = ["created_at", "updated_at"]
+```
+
+## Settings and Configuration
+- Use environment variables for configuration
+- Follow the settings structure in `plane/settings/`
+- Use proper database configuration
+- Implement proper logging
+
+## Testing
+- Write unit tests for models, views, and serializers
+- Use Django's test framework
+- Test API endpoints with proper authentication
+- Follow the test structure in `plane/tests/`

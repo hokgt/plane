@@ -82,6 +82,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_staff = models.BooleanField(default=False)
     is_email_verified = models.BooleanField(default=False)
     is_password_autoset = models.BooleanField(default=False)
+    
+    # user role system
+    USER_ROLE_CHOICES = (
+        ('admin', 'Admin'),
+        ('staff', 'Staff'),
+        ('user', 'User'),
+    )
+    user_role = models.CharField(
+        max_length=20, 
+        choices=USER_ROLE_CHOICES, 
+        default='user',
+        help_text="User role for system-wide permissions"
+    )
 
     # random token generated
     token = models.CharField(max_length=64, blank=True)
@@ -126,6 +139,29 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.username} <{self.email}>"
+    
+    def is_admin(self):
+        """Check if user has admin role"""
+        return self.user_role == 'admin' or self.is_superuser
+    
+    def is_staff_role(self):
+        """Check if user has staff role"""
+        return self.user_role == 'staff' or self.is_admin()
+    
+    def is_user_role(self):
+        """Check if user has user role"""
+        return self.user_role == 'user'
+    
+    def has_permission(self, permission):
+        """Check if user has specific permission based on role"""
+        if self.is_admin():
+            return True
+        elif self.is_staff_role():
+            # Staff can do most things except admin-only actions
+            return permission not in ['manage_users', 'system_settings']
+        else:
+            # Regular users have limited permissions
+            return permission in ['view_own_data', 'create_issues', 'edit_own_profile']
 
     @property
     def avatar_url(self):

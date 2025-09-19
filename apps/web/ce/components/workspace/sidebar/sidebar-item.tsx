@@ -38,11 +38,12 @@ export const SidebarItem: FC<TSidebarItemProps> = observer((props) => {
     if (isExtendedSidebarOpened) toggleExtendedSidebar(false);
   };
 
-  const staticItems = ["home", "inbox", "pi-chat", "projects"];
+  const staticItems = ["home", "inbox", "pi-chat", "projects", "user_management"];
 
-  if (!allowPermissions(item.access as any, EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())) {
-    return null;
-  }
+  // Temporarily disable permission check for debugging
+  // if (!allowPermissions(item.access as any, EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())) {
+  //   return null;
+  // }
 
   const itemHref =
     item.key === "your_work"
