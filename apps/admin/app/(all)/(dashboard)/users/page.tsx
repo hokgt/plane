@@ -73,7 +73,6 @@ const UserManagementPage = observer(() => {
             message: () => "Failed to update user role",
           },
         });
-        
         // Refresh users list
         await fetchUsers();
       } else {
@@ -98,7 +97,7 @@ const UserManagementPage = observer(() => {
   };
 
   // toggle user status
-  const toggleUserStatus = async (userId: string, isActive: boolean) => {
+  const toggleUserStatus = async (userId: string, _isActive: boolean) => {
     try {
       setUpdatingUser(userId);
       const response = await fetch(`/api/v1/users/${userId}/status/`, {
@@ -120,7 +119,6 @@ const UserManagementPage = observer(() => {
             message: () => "Failed to update user status",
           },
         });
-        
         // Refresh users list
         await fetchUsers();
       } else {
@@ -220,8 +218,8 @@ const UserManagementPage = observer(() => {
                   key={user.id}
                   className={cn(
                     "flex items-center justify-between p-4 rounded-lg border",
-                    user.is_active 
-                      ? "bg-custom-background-100 border-custom-border-200" 
+                    user.is_active
+                      ? "bg-custom-background-100 border-custom-border-200"
                       : "bg-custom-background-80 border-custom-border-100 opacity-60"
                   )}
                 >
@@ -252,8 +250,8 @@ const UserManagementPage = observer(() => {
                     {/* Status Badge */}
                     <span className={cn(
                       "px-2 py-1 text-xs font-medium rounded-full border",
-                      user.is_active 
-                        ? "bg-green-100 text-green-800 border-green-200" 
+                      user.is_active
+                        ? "bg-green-100 text-green-800 border-green-200"
                         : "bg-red-100 text-red-800 border-red-200"
                     )}>
                       {user.is_active ? 'ACTIVE' : 'INACTIVE'}
@@ -309,4 +307,3 @@ const UserManagementPage = observer(() => {
 });
 
 export default UserManagementPage;
-

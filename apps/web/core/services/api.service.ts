@@ -21,7 +21,10 @@ export abstract class APIService {
       (error) => {
         if (error.response && error.response.status === 401) {
           const currentPath = window.location.pathname;
-          window.location.replace(`/${currentPath ? `?next_path=${currentPath}` : ``}`);
+          // Avoid redirect loop by checking if we're already on the login page
+          if (!currentPath.includes('/sign-in') && !currentPath.includes('/login')) {
+            window.location.replace(`/?next_path=${encodeURIComponent(currentPath)}`);
+          }
         }
         return Promise.reject(error);
       }

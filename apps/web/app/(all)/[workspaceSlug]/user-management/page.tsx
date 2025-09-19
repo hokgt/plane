@@ -4,19 +4,24 @@ import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
 import { Search, Users, Shield, UserCheck, UserX, Edit3, MoreVertical, AlertTriangle, Lock } from "lucide-react";
-import { Button, Input, Avatar, Badge, CustomMenu, CustomSelect } from "@plane/ui";
+import { Button, Input, Avatar, CustomMenu, CustomSelect } from "@plane/ui";
 import { useTranslation } from "@plane/i18n";
+import { WorkspaceService } from "@/services/workspace.service";
+import { IWorkspaceMember } from "@plane/types";
+import { API_BASE_URL } from "@plane/constants";
 
 // Types
-interface User {
+interface WorkspaceMember {
   id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  display_name: string;
-  avatar_url?: string;
-  user_role: 'admin' | 'staff' | 'user';
-  is_active: boolean;
+  member: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    display_name: string;
+    avatar: string;
+  };
+  role: number; // 20 = Admin, 15 = Member, 10 = Viewer, 5 = Guest
   created_at: string;
 }
 
@@ -24,135 +29,142 @@ const UserManagementPage = observer(() => {
   const { workspaceSlug } = useParams();
   const { t } = useTranslation();
   
-  const [users, setUsers] = useState<User[]>([]);
+  const [members, setMembers] = useState<IWorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
   const [accessDenied, setAccessDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch users
-  const fetchUsers = async () => {
+  // Initialize workspace service with API_BASE_URL
+  const workspaceService = new WorkspaceService(API_BASE_URL);
+
+  // Fetch workspace members
+  const fetchMembers = async () => {
     try {
       setLoading(true);
       setError(null);
       setAccessDenied(false);
       
-      const params = new URLSearchParams();
-      if (searchTerm) params.append('search', searchTerm);
-      if (roleFilter) params.append('role', roleFilter);
-      if (statusFilter) params.append('is_active', statusFilter);
+      console.log('Fetching members for workspace:', workspaceSlug);
       
-      const response = await fetch(`/api/v1/users/?${params.toString()}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
+      const data = await workspaceService.fetchWorkspaceMembers(workspaceSlug.toString());
+      let filteredMembers = data;
       
-      if (response.status === 403) {
+      // Apply search filter
+      if (searchTerm) {
+        filteredMembers = filteredMembers.filter((member: IWorkspaceMember) =>
+          member.member.display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          member.member.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+      }
+      
+      // Apply role filter
+      if (roleFilter) {
+        const roleValue = getRoleValue(roleFilter);
+        filteredMembers = filteredMembers.filter((member: IWorkspaceMember) =>
+          member.role === roleValue
+        );
+      }
+      
+      setMembers(filteredMembers);
+      console.log('Successfully fetched members:', filteredMembers.length);
+    } catch (error: any) {
+      console.error('Error fetching members:', error);
+      
+      if (error?.status === 403) {
         setAccessDenied(true);
-        return;
-      }
-      
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data);
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || `Failed to fetch users (${response.status})`);
+        setError(error?.detail || error?.message || 'Failed to fetch workspace members');
       }
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      setError('Network error: Unable to connect to server');
     } finally {
       setLoading(false);
     }
   };
 
-  // Update user role
-  const updateUserRole = async (userId: string, newRole: string) => {
-    try {
-      const response = await fetch(`/api/v1/users/${userId}/role/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-        body: JSON.stringify({ user_role: newRole }),
-      });
-      
-      if (response.status === 403) {
-        setAccessDenied(true);
-        return;
-      }
-      
-      if (response.ok) {
-        fetchUsers(); // Refresh the list
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || `Failed to update user role (${response.status})`);
-      }
-    } catch (error) {
-      console.error('Error updating user role:', error);
-      setError('Network error: Unable to update user role');
+  // Helper functions for role management
+  const getRoleValue = (roleString: string): number => {
+    switch (roleString) {
+      case 'admin': return 20;
+      case 'member': return 15;
+      case 'viewer': return 10;
+      case 'guest': return 5;
+      default: return 15;
     }
   };
 
-  // Toggle user status
-  const toggleUserStatus = async (userId: string) => {
+  const getRoleString = (roleValue: number): string => {
+    switch (roleValue) {
+      case 20: return 'admin';
+      case 15: return 'member';
+      case 10: return 'viewer';
+      case 5: return 'guest';
+      default: return 'member';
+    }
+  };
+
+  // Update member role
+  const updateMemberRole = async (memberId: string, newRole: string) => {
     try {
-      const response = await fetch(`/api/v1/users/${userId}/status/`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-        },
-      });
-      
-      if (response.status === 403) {
+      const roleValue = getRoleValue(newRole);
+      await workspaceService.updateWorkspaceMember(workspaceSlug.toString(), memberId, { role: roleValue });
+      fetchMembers(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error updating member role:', error);
+      if (error?.status === 403) {
         setAccessDenied(true);
-        return;
-      }
-      
-      if (response.ok) {
-        fetchUsers(); // Refresh the list
       } else {
-        const errorData = await response.json().catch(() => ({}));
-        setError(errorData.error || `Failed to update user status (${response.status})`);
+        setError(error?.detail || error?.message || 'Failed to update member role');
       }
-    } catch (error) {
-      console.error('Error toggling user status:', error);
-      setError('Network error: Unable to update user status');
+    }
+  };
+
+  // Remove member from workspace
+  const removeMember = async (memberId: string) => {
+    try {
+      await workspaceService.deleteWorkspaceMember(workspaceSlug.toString(), memberId);
+      fetchMembers(); // Refresh the list
+    } catch (error: any) {
+      console.error('Error removing member:', error);
+      if (error?.status === 403) {
+        setAccessDenied(true);
+      } else {
+        setError(error?.detail || error?.message || 'Failed to remove member');
+      }
     }
   };
 
   useEffect(() => {
-    fetchUsers();
-  }, [searchTerm, roleFilter, statusFilter]);
+    fetchMembers();
+  }, [searchTerm, roleFilter, workspaceSlug]);
 
-  const getRoleBadgeColor = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-800';
-      case 'staff':
-        return 'bg-blue-100 text-blue-800';
-      case 'user':
-        return 'bg-gray-100 text-gray-800';
+  const getRoleBadgeClasses = (roleValue: number): string => {
+    switch (roleValue) {
+      case 20: // admin
+        return 'bg-red-100 text-red-800 border border-red-200';
+      case 15: // member
+        return 'bg-blue-100 text-blue-800 border border-blue-200';
+      case 10: // viewer
+        return 'bg-green-100 text-green-800 border border-green-200';
+      case 5: // guest
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-100 text-gray-800 border border-gray-200';
     }
   };
 
-  const getRoleIcon = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return <Shield className="h-4 w-4" />;
-      case 'staff':
-        return <UserCheck className="h-4 w-4" />;
-      case 'user':
-        return <Users className="h-4 w-4" />;
+  const getRoleIcon = (roleValue: number) => {
+    switch (roleValue) {
+      case 20: // admin
+        return <Shield className="h-3 w-3" />;
+      case 15: // member
+        return <UserCheck className="h-3 w-3" />;
+      case 10: // viewer
+        return <Users className="h-3 w-3" />;
+      case 5: // guest
+        return <Users className="h-3 w-3" />;
       default:
-        return <Users className="h-4 w-4" />;
+        return <Users className="h-3 w-3" />;
     }
   };
 
@@ -167,9 +179,9 @@ const UserManagementPage = observer(() => {
                 <h3 className="text-lg font-semibold text-custom-text-100">
                   User Management
                 </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {users.length} users
-                </Badge>
+                <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 rounded">
+                  {members.length} members
+                </span>
               </div>
               <p className="text-sm text-custom-text-300">
                 Manage user roles and permissions across the system
@@ -198,19 +210,9 @@ const UserManagementPage = observer(() => {
           >
             <CustomSelect.Option value="">All Roles</CustomSelect.Option>
             <CustomSelect.Option value="admin">Admin</CustomSelect.Option>
-            <CustomSelect.Option value="staff">Staff</CustomSelect.Option>
-            <CustomSelect.Option value="user">User</CustomSelect.Option>
-          </CustomSelect>
-
-          <CustomSelect
-            value={statusFilter}
-            onChange={(value: string) => setStatusFilter(value)}
-            label={statusFilter || "Status"}
-            className="w-32"
-          >
-            <CustomSelect.Option value="">All Status</CustomSelect.Option>
-            <CustomSelect.Option value="true">Active</CustomSelect.Option>
-            <CustomSelect.Option value="false">Inactive</CustomSelect.Option>
+            <CustomSelect.Option value="member">Member</CustomSelect.Option>
+            <CustomSelect.Option value="viewer">Viewer</CustomSelect.Option>
+            <CustomSelect.Option value="guest">Guest</CustomSelect.Option>
           </CustomSelect>
         </div>
 
@@ -239,92 +241,76 @@ const UserManagementPage = observer(() => {
                 <AlertTriangle className="h-12 w-12 text-orange-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-custom-text-100 mb-2">Error Loading Users</h3>
                 <p className="text-custom-text-400 mb-4">{error}</p>
-                <Button onClick={fetchUsers} variant="primary" size="sm">
+                <Button onClick={fetchMembers} variant="primary" size="sm">
                   Try Again
                 </Button>
               </div>
             </div>
-          ) : users.length === 0 ? (
+          ) : members.length === 0 ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
                 <Users className="h-12 w-12 text-custom-text-400 mx-auto mb-4" />
-                <div className="text-custom-text-400">No users found</div>
+                <div className="text-custom-text-400">No members found</div>
               </div>
             </div>
           ) : (
             <div className="px-5 py-4">
               <div className="space-y-3">
-                {users.map((user) => (
+                {members.map((member) => (
                   <div
-                    key={user.id}
+                    key={member.id}
                     className="flex items-center justify-between p-4 border border-custom-border-200 rounded-lg hover:bg-custom-background-80 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <Avatar
-                        name={user.display_name}
-                        src={user.avatar_url}
+                        name={member.member.display_name}
+                        src={member.member.avatar_url}
                         size="md"
                       />
                       <div>
                         <div className="flex items-center gap-2">
                           <h4 className="font-medium text-custom-text-100">
-                            {user.display_name}
+                            {member.member.display_name}
                           </h4>
-                          <Badge className={getRoleBadgeColor(user.user_role)}>
-                            <div className="flex items-center gap-1">
-                              {getRoleIcon(user.user_role)}
-                              {user.user_role.charAt(0).toUpperCase() + user.user_role.slice(1)}
-                            </div>
-                          </Badge>
-                          {!user.is_active && (
-                            <Badge variant="secondary" className="bg-red-100 text-red-800">
-                              <UserX className="h-3 w-3 mr-1" />
-                              Inactive
-                            </Badge>
-                          )}
+                          <div className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${getRoleBadgeClasses(member.role)}`}>
+                            {getRoleIcon(member.role)}
+                            {getRoleString(member.role).charAt(0).toUpperCase() + getRoleString(member.role).slice(1)}
+                          </div>
                         </div>
-                        <p className="text-sm text-custom-text-400">{user.email}</p>
+                        <p className="text-sm text-custom-text-400">{member.member.email}</p>
                         <p className="text-xs text-custom-text-500">
-                          Joined {new Date(user.created_at).toLocaleDateString()}
+                          Joined {member.created_at ? new Date(member.created_at).toLocaleDateString() : 'Unknown'}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-2">
                       <CustomSelect
-                        value={user.user_role}
-                        onChange={(value: string) => updateUserRole(user.id, value)}
-                        label={user.user_role.charAt(0).toUpperCase() + user.user_role.slice(1)}
+                        value={getRoleString(member.role)}
+                        onChange={(value: string) => updateMemberRole(member.id, value)}
+                        label={getRoleString(member.role).charAt(0).toUpperCase() + getRoleString(member.role).slice(1)}
                         className="w-24"
                       >
-                        <CustomSelect.Option value="user">User</CustomSelect.Option>
-                        <CustomSelect.Option value="staff">Staff</CustomSelect.Option>
+                        <CustomSelect.Option value="guest">Guest</CustomSelect.Option>
+                        <CustomSelect.Option value="viewer">Viewer</CustomSelect.Option>
+                        <CustomSelect.Option value="member">Member</CustomSelect.Option>
                         <CustomSelect.Option value="admin">Admin</CustomSelect.Option>
                       </CustomSelect>
 
                       <CustomMenu
                         customButton={
-                          <Button variant="ghost" size="sm">
+                          <Button variant="link-neutral" size="sm">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         }
                         placement="bottom-end"
                       >
                         <CustomMenu.MenuItem
-                          onClick={() => toggleUserStatus(user.id)}
+                          onClick={() => removeMember(member.id)}
                         >
                           <div className="flex items-center gap-2">
-                            {user.is_active ? (
-                              <>
-                                <UserX className="h-4 w-4" />
-                                Deactivate
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="h-4 w-4" />
-                                Activate
-                              </>
-                            )}
+                            <UserX className="h-4 w-4" />
+                            Remove from workspace
                           </div>
                         </CustomMenu.MenuItem>
                       </CustomMenu>

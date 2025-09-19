@@ -29,7 +29,7 @@ const InstanceEmailPage = observer(() => {
           message: "Email feature has been disabled",
           type: TOAST_TYPE.SUCCESS,
         });
-      } catch (error) {
+      } catch (_error) {
         setToast({
           title: "Error disabling email",
           message: "Failed to disable email feature. Please try again.",
