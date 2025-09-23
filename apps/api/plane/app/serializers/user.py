@@ -78,6 +78,7 @@ class UserMeSerializer(BaseSerializer):
             "is_password_autoset",
             "is_email_verified",
             "last_login_medium",
+            "user_role",
         ]
         read_only_fields = fields
 
@@ -179,6 +180,7 @@ class UserAdminLiteSerializer(BaseSerializer):
             "display_name",
             "email",
             "last_login_medium",
+            "user_role",
         ]
         read_only_fields = ["id", "is_bot"]
 

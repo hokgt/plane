@@ -83,16 +83,19 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_email_verified = models.BooleanField(default=False)
     is_password_autoset = models.BooleanField(default=False)
     
-    # user role system
+    # user role system - Corporate hierarchy
     USER_ROLE_CHOICES = (
+        ('owner', 'Owner'),
+        ('manager', 'Manager'),
         ('admin', 'Admin'),
         ('staff', 'Staff'),
         ('user', 'User'),
+        ('guest', 'Guest'),
     )
     user_role = models.CharField(
         max_length=20, 
         choices=USER_ROLE_CHOICES, 
-        default='user',
+        default='staff',
         help_text="User role for system-wide permissions"
     )
 
@@ -140,28 +143,51 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return f"{self.username} <{self.email}>"
     
-    def is_admin(self):
-        """Check if user has admin role"""
-        return self.user_role == 'admin' or self.is_superuser
+    def is_owner(self):
+        """Check if user has owner role (God Admin)"""
+        return self.user_role == 'owner' or self.is_superuser
+    
+    def is_manager(self):
+        """Check if user has manager role (Admin level)"""
+        return self.user_role in ['manager', 'admin'] or self.is_owner()
     
     def is_staff_role(self):
         """Check if user has staff role"""
-        return self.user_role == 'staff' or self.is_admin()
+        return self.user_role == 'staff' or self.is_manager()
     
-    def is_user_role(self):
-        """Check if user has user role"""
-        return self.user_role == 'user'
+    def is_guest(self):
+        """Check if user has guest role"""
+        return self.user_role == 'guest'
+    
+    def can_manage_users(self):
+        """Check if user can manage other users (Owner and Manager only)"""
+        return self.is_owner() or self.is_manager()
+    
+    def can_view_user_management(self):
+        """Check if user can view user management (Owner and Manager only)"""
+        return self.is_owner() or self.is_manager()
+
+    def can_manage_workspace(self):
+        """Check if user can manage workspace settings (Owner only)"""
+        return self.is_owner()
+
+    def can_manage_projects(self):
+        """Check if user can manage projects (Owner and Manager)"""
+        return self.is_owner() or self.is_manager()
     
     def has_permission(self, permission):
         """Check if user has specific permission based on role"""
-        if self.is_admin():
-            return True
+        if self.is_owner():
+            return True  # Owner has all permissions
+        elif self.is_manager():
+            # Manager can do most things except owner-only actions
+            return permission not in ['manage_workspace', 'system_settings']
         elif self.is_staff_role():
-            # Staff can do most things except admin-only actions
-            return permission not in ['manage_users', 'system_settings']
+            # Staff can do regular work but not management
+            return permission not in ['manage_users', 'manage_workspace', 'system_settings']
         else:
-            # Regular users have limited permissions
-            return permission in ['view_own_data', 'create_issues', 'edit_own_profile']
+            # Guest has very limited permissions
+            return permission in ['view_own_data', 'view_issues']
 
     @property
     def avatar_url(self):

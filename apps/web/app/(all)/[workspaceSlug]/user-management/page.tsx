@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react";
 import { observer } from "mobx-react";
 import { useParams } from "next/navigation";
-import { Search, Users, Shield, UserCheck, UserX, Edit3, MoreVertical, AlertTriangle, Lock } from "lucide-react";
+import { Search, Users, Shield, UserCheck, UserX, Edit3, MoreVertical, AlertTriangle, Lock, UserPlus } from "lucide-react";
 import { Button, Input, Avatar, CustomMenu, CustomSelect } from "@plane/ui";
 import { useTranslation } from "@plane/i18n";
-import { WorkspaceService } from "@/services/workspace.service";
+import { WorkspaceService } from "@/plane-web/services";
 import { IWorkspaceMember } from "@plane/types";
-import { API_BASE_URL } from "@plane/constants";
+import { useUser } from "@/hooks/store";
 
 // Types
 interface WorkspaceMember {
@@ -28,6 +28,7 @@ interface WorkspaceMember {
 const UserManagementPage = observer(() => {
   const { workspaceSlug } = useParams();
   const { t } = useTranslation();
+  const { data: currentUser } = useUser();
 
   const [members, setMembers] = useState<IWorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,9 +36,60 @@ const UserManagementPage = observer(() => {
   const [roleFilter, setRoleFilter] = useState("");
   const [accessDenied, setAccessDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("15"); // Default to Member (staff)
+  const [inviteLoading, setInviteLoading] = useState(false);
 
-  // Initialize workspace service with API_BASE_URL
-  const workspaceService = new WorkspaceService(API_BASE_URL);
+  // Initialize workspace service
+  const workspaceService = new WorkspaceService();
+
+  // Invite member to workspace
+  const inviteMember = async () => {
+    if (!inviteEmail.trim()) {
+      setError("Please enter an email address");
+      return;
+    }
+
+    if (!inviteRole) {
+      setError("Please select a role");
+      return;
+    }
+
+    setInviteLoading(true);
+    setError(null);
+
+    try {
+      const inviteData = {
+        emails: [
+          {
+            email: inviteEmail.trim().toLowerCase(),
+            role: parseInt(inviteRole)
+          }
+        ]
+      };
+
+      await workspaceService.inviteWorkspace(workspaceSlug?.toString() || "", inviteData);
+      
+      // Refresh members list
+      await fetchMembers();
+      
+      // Reset form and close modal
+      setInviteEmail("");
+      setInviteRole("15");
+      setShowInviteModal(false);
+      
+      // Show success message (you can add a toast notification here)
+      console.log("Member invited successfully!");
+      
+    } catch (error: any) {
+      console.error("Error inviting member:", error);
+      setError(error?.response?.data?.error || "Failed to invite member. Please try again.");
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
 
   // Fetch workspace members
   const fetchMembers = async () => {
@@ -134,9 +186,65 @@ const UserManagementPage = observer(() => {
     }
   };
 
+  // Remove manager function (only admins can do this)
+  const removeManager = async (memberId: string) => {
+    if (currentUserRole !== 'admin') {
+      alert('Only admins can remove managers');
+      return;
+    }
+
+    if (confirm('Are you sure you want to remove this manager?')) {
+      try {
+        const response = await fetch(`/api/v1/workspaces/${workspaceSlug}/members/${memberId}/remove-manager/`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          // Refresh the members list
+          fetchMembers();
+          alert('Manager removed successfully');
+        } else {
+          alert('Failed to remove manager');
+        }
+      } catch (error) {
+        console.error('Error removing manager:', error);
+        alert('Error removing manager');
+      }
+    }
+  };
+
+  // Check if user can access this page
+  const canAccessUserManagement = () => {
+    const userRole = currentUser?.user_role || 'guest';
+    console.log('UserManagementPage - Current user role:', userRole);
+    return userRole === 'admin' || userRole === 'manager';
+  };
+
+  // Check if user can remove managers
+  const canRemoveManager = (memberRole: string) => {
+    const userRole = currentUser?.user_role || 'guest';
+    return userRole === 'admin' && memberRole === 'manager';
+  };
+
   useEffect(() => {
     fetchMembers();
   }, [searchTerm, roleFilter, workspaceSlug]);
+
+  // Check access permissions
+  if (!canAccessUserManagement()) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-custom-text-100 mb-2">Access Denied</h2>
+          <p className="text-custom-text-300">You don't have permission to view user management.</p>
+        </div>
+      </div>
+    );
+  }
 
   const getRoleBadgeClasses = (roleValue: number): string => {
     switch (roleValue) {
@@ -147,9 +255,9 @@ const UserManagementPage = observer(() => {
       case 10: // viewer
         return 'bg-green-100 text-green-800 border border-green-200';
       case 5: // guest
-        return 'bg-gray-100 text-gray-800 border border-gray-200';
+        return 'bg-custom-background-80 text-custom-text-300 border border-custom-border-200';
       default:
-        return 'bg-gray-100 text-gray-800 border border-gray-200';
+        return 'bg-custom-background-80 text-custom-text-300 border border-custom-border-200';
     }
   };
 
@@ -175,13 +283,23 @@ const UserManagementPage = observer(() => {
         <div className="relative flex w-full flex-shrink-0 flex-col z-10">
           <div className="flex w-full items-center gap-2 px-5 py-4 border-b border-custom-border-200">
             <div className="flex w-full flex-col gap-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg font-semibold text-custom-text-100">
-                  User Management
-                </h3>
-                <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200 rounded">
-                  {members.length} members
-                </span>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-custom-text-100">
+                    User Management
+                  </h3>
+                  <span className="px-2 py-1 text-xs font-medium bg-custom-background-80 text-custom-text-300 border border-custom-border-200 rounded">
+                    {members.length} members
+                  </span>
+                </div>
+                <Button
+                  onClick={() => setShowInviteModal(true)}
+                  className="flex items-center gap-2"
+                  size="sm"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invite Member
+                </Button>
               </div>
               <p className="text-sm text-custom-text-300">
                 Manage user roles and permissions across the system
@@ -305,6 +423,16 @@ const UserManagementPage = observer(() => {
                         }
                         placement="bottom-end"
                       >
+                        {canRemoveManager(getRoleString(member.role)) && (
+                          <CustomMenu.MenuItem
+                            onClick={() => removeManager(member.id)}
+                          >
+                            <div className="flex items-center gap-2 text-red-600">
+                              <UserX className="h-4 w-4" />
+                              Remove Manager
+                            </div>
+                          </CustomMenu.MenuItem>
+                        )}
                         <CustomMenu.MenuItem
                           onClick={() => removeMember(member.id)}
                         >
@@ -321,6 +449,100 @@ const UserManagementPage = observer(() => {
             </div>
           )}
         </div>
+
+        {/* Invite Member Modal */}
+        {showInviteModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-custom-background-100 rounded-lg p-6 w-full max-w-md mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-custom-text-100">
+                  Invite New Member
+                </h3>
+                <Button
+                  variant="link-neutral"
+                  size="sm"
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setInviteEmail("");
+                    setInviteRole("15");
+                    setError(null);
+                  }}
+                >
+                  <UserX className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-custom-text-200 mb-2">
+                    Email Address
+                  </label>
+                  <Input
+                    type="email"
+                    placeholder="user@example.com"
+                    value={inviteEmail}
+                    onChange={(e) => setInviteEmail(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-custom-text-200 mb-2">
+                    Role
+                  </label>
+                  <CustomSelect
+                    value={inviteRole}
+                    onChange={(value: string) => setInviteRole(value)}
+                    label={inviteRole === "5" ? "Guest" : inviteRole === "10" ? "Viewer" : inviteRole === "15" ? "Staff" : "Admin"}
+                    className="w-full"
+                  >
+                    <CustomSelect.Option value="5">Guest - Limited access</CustomSelect.Option>
+                    <CustomSelect.Option value="10">Viewer - Can view assigned items</CustomSelect.Option>
+                    <CustomSelect.Option value="15">Staff - Can view team members and assigned work</CustomSelect.Option>
+                    <CustomSelect.Option value="20">Admin - Can manage team members</CustomSelect.Option>
+                  </CustomSelect>
+                </div>
+
+                {error && (
+                  <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 pt-4">
+                  <Button
+                    variant="link-neutral"
+                    onClick={() => {
+                      setShowInviteModal(false);
+                      setInviteEmail("");
+                      setInviteRole("15");
+                      setError(null);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={inviteMember}
+                    disabled={inviteLoading || !inviteEmail.trim()}
+                    className="flex items-center gap-2"
+                  >
+                    {inviteLoading ? (
+                      <>
+                        <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        Inviting...
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="h-4 w-4" />
+                        Send Invite
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

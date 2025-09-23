@@ -83,10 +83,17 @@ class RoleBasedSignUpEndpoint(View):
             )
             return HttpResponseRedirect(url)
 
-        # Validate role
-        valid_roles = ['admin', 'staff', 'user']  # Based on USER_ROLE_CHOICES
-        if user_role not in valid_roles:
-            user_role = 'user'  # Default to user role
+        # Validate role and map frontend values to backend values
+        role_mapping = {
+            'manager': 'admin',  # Map 'manager' from frontend to 'admin' in backend
+            'admin': 'admin',
+            'staff': 'staff',
+            'user': 'user',
+            'guest': 'user'  # Map 'guest' from frontend to 'user' in backend
+        }
+        
+        # Map the role or default to 'user' if not found
+        user_role = role_mapping.get(user_role, 'user')
 
         # Check if user already exists
         if User.objects.filter(email=email).exists():
@@ -158,7 +165,7 @@ class RoleSelectionEndpoint(View):
     def get(self, request):
         roles = [
             {
-                'value': 'user',
+                'value': 'guest',
                 'label': 'Guest',
                 'description': 'Limited access, can view assigned items'
             },
@@ -168,7 +175,7 @@ class RoleSelectionEndpoint(View):
                 'description': 'Can view team members and assigned work items'
             },
             {
-                'value': 'admin',
+                'value': 'manager',
                 'label': 'Manager',
                 'description': 'Can manage team members and invite users'
             }
@@ -176,6 +183,6 @@ class RoleSelectionEndpoint(View):
         
         return JsonResponse({
             'roles': roles,
-            'default_role': 'user'
+            'default_role': 'staff'
         })
 
