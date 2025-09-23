@@ -26,7 +26,7 @@ export const UserManagementHeader = observer(() => {
             </div>
           </div>
         </div>
-        
+
         <Breadcrumbs>
           <Breadcrumbs.BreadcrumbItem
             type="text"

@@ -28,7 +28,7 @@ interface WorkspaceMember {
 const UserManagementPage = observer(() => {
   const { workspaceSlug } = useParams();
   const { t } = useTranslation();
-  
+
   const [members, setMembers] = useState<IWorkspaceMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,12 +45,12 @@ const UserManagementPage = observer(() => {
       setLoading(true);
       setError(null);
       setAccessDenied(false);
-      
+
       console.log('Fetching members for workspace:', workspaceSlug);
-      
+
       const data = await workspaceService.fetchWorkspaceMembers(workspaceSlug.toString());
       let filteredMembers = data;
-      
+
       // Apply search filter
       if (searchTerm) {
         filteredMembers = filteredMembers.filter((member: IWorkspaceMember) =>
@@ -58,7 +58,7 @@ const UserManagementPage = observer(() => {
           member.member.email?.toLowerCase().includes(searchTerm.toLowerCase())
         );
       }
-      
+
       // Apply role filter
       if (roleFilter) {
         const roleValue = getRoleValue(roleFilter);
@@ -66,12 +66,12 @@ const UserManagementPage = observer(() => {
           member.role === roleValue
         );
       }
-      
+
       setMembers(filteredMembers);
       console.log('Successfully fetched members:', filteredMembers.length);
     } catch (error: any) {
       console.error('Error fetching members:', error);
-      
+
       if (error?.status === 403) {
         setAccessDenied(true);
       } else {
@@ -201,7 +201,7 @@ const UserManagementPage = observer(() => {
               className="max-w-sm"
             />
           </div>
-          
+
           <CustomSelect
             value={roleFilter}
             onChange={(value: string) => setRoleFilter(value)}

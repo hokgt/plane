@@ -286,7 +286,7 @@ class Account(TimeAuditModel):
         "db.User", on_delete=models.CASCADE, related_name="accounts"
     )
     provider_account_id = models.CharField(max_length=255)
-    provider = models.CharField(choices=PROVIDER_CHOICES)
+    provider = models.CharField(max_length=50, choices=PROVIDER_CHOICES)
     access_token = models.TextField()
     access_token_expired_at = models.DateTimeField(null=True)
     refresh_token = models.TextField(null=True, blank=True)

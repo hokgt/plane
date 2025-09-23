@@ -34,7 +34,7 @@ const UserManagementPage = observer(() => {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
         },
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         setUsers(data.results || data);
@@ -146,7 +146,7 @@ const UserManagementPage = observer(() => {
   useSWR("ADMIN_USERS", fetchUsers);
 
   // filter users based on search term
-  const filteredUsers = users.filter(user => 
+  const filteredUsers = users.filter(user =>
     user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.last_name.toLowerCase().includes(searchTerm.toLowerCase())
