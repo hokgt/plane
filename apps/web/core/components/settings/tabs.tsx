@@ -4,7 +4,6 @@ import { useParams, usePathname } from "next/navigation";
 import { cn } from "@plane/utils";
 import { useProject, useUser } from "@/hooks/store";
 import { useState, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
 
 const TABS = {
   account: {
@@ -40,27 +39,19 @@ const SettingsTabs = observer(() => {
   // State for direct API call
   const [userRole, setUserRole] = useState<string>('guest');
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   
   // Force refresh user data on component mount
   useEffect(() => {
     const loadUserData = async () => {
       try {
         setIsLoading(true);
-        console.log('SettingsTabs - Starting fresh user data fetch...');
-        
         // Force fetch fresh user data
         const user = await fetchCurrentUser();
-        console.log('SettingsTabs - Fresh user data:', user);
         
         if (user?.user_role) {
           setUserRole(user.user_role);
-          console.log('SettingsTabs - User role from fresh fetch:', user.user_role);
-        } else {
-          console.log('SettingsTabs - No user_role in fresh fetch, user:', user);
         }
       } catch (error) {
-        console.error('SettingsTabs - Error loading user data:', error);
         setUserRole('guest');
       } finally {
         setIsLoading(false);
@@ -74,37 +65,11 @@ const SettingsTabs = observer(() => {
   useEffect(() => {
     if (currentUser?.user_role) {
       setUserRole(currentUser.user_role);
-      console.log('SettingsTabs - User role updated from currentUser:', currentUser.user_role);
       setIsLoading(false);
-    } else if (currentUser && !currentUser.user_role) {
-      console.log('SettingsTabs - currentUser exists but no user_role field:', currentUser);
     }
   }, [currentUser?.user_role]);
   
-  // Debug logging
-  useEffect(() => {
-    console.log('SettingsTabs - Current user:', currentUser);
-    console.log('SettingsTabs - User role:', userRole);
-    console.log('SettingsTabs - Is loading:', isLoading);
-  }, [currentUser, userRole, isLoading]);
 
-  // Manual refresh function
-  const handleRefreshUserData = async () => {
-    setRefreshing(true);
-    try {
-      console.log('SettingsTabs - Manual refresh triggered');
-      const user = await fetchCurrentUser();
-      console.log('SettingsTabs - Manual refresh user data:', user);
-      if (user?.user_role) {
-        setUserRole(user.user_role);
-        console.log('SettingsTabs - Manual refresh user role:', user.user_role);
-      }
-    } catch (error) {
-      console.error('SettingsTabs - Manual refresh error:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  };
 
   // Get available tabs based on user role
   const getAvailableTabs = () => {
@@ -152,24 +117,6 @@ const SettingsTabs = observer(() => {
         })}
       </div>
       
-      {/* Debug refresh button - only show in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <button
-          onClick={handleRefreshUserData}
-          disabled={refreshing || isLoading}
-          className="flex items-center gap-1 text-xs px-2 py-1 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3 w-3 ${refreshing ? 'animate-spin' : ''}`} />
-          {refreshing ? 'Refreshing...' : 'Refresh User'}
-        </button>
-      )}
-      
-      {/* Debug info - only show in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-          Role: {userRole} | Loading: {isLoading ? 'Yes' : 'No'}
-        </div>
-      )}
     </div>
   );
 });

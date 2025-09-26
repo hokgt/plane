@@ -33,6 +33,7 @@ type TPasswordFormValues = {
   email: string;
   password: string;
   confirm_password?: string;
+  user_role?: string;
 };
 
 const defaultValues: TPasswordFormValues = {
@@ -103,10 +104,12 @@ export const AuthPasswordForm: React.FC<Props> = observer((props: Props) => {
     () =>
       !isSubmitting &&
       !!passwordFormData.password &&
-      (mode === EAuthModes.SIGN_UP ? passwordFormData.password === passwordFormData.confirm_password : true)
+      (mode === EAuthModes.SIGN_UP ? 
+        passwordFormData.password === passwordFormData.confirm_password && 
+        !!passwordFormData.user_role : true)
         ? false
         : true,
-    [isSubmitting, mode, passwordFormData.confirm_password, passwordFormData.password]
+    [isSubmitting, mode, passwordFormData.confirm_password, passwordFormData.password, passwordFormData.user_role]
   );
 
   const password = passwordFormData?.password ?? "";
@@ -180,6 +183,9 @@ export const AuthPasswordForm: React.FC<Props> = observer((props: Props) => {
       >
         <input type="hidden" name="csrfmiddlewaretoken" />
         <input type="hidden" value={passwordFormData.email} name="email" />
+        {mode === EAuthModes.SIGN_UP && passwordFormData.user_role && (
+          <input type="hidden" value={passwordFormData.user_role} name="user_role" />
+        )}
         {nextPath && <input type="hidden" value={nextPath} name="next_path" />}
         <div className="space-y-1">
           <label htmlFor="email" className="text-sm font-medium text-onboarding-text-300">
@@ -286,6 +292,62 @@ export const AuthPasswordForm: React.FC<Props> = observer((props: Props) => {
               renderPasswordMatchError && (
                 <span className="text-sm text-red-500">{t("auth.common.password.errors.match")}</span>
               )}
+          </div>
+        )}
+
+        {mode === EAuthModes.SIGN_UP && (
+          <div className="space-y-1">
+            <label htmlFor="user-role" className="text-sm text-onboarding-text-300 font-medium">
+              Choose Your Role
+            </label>
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 gap-3">
+                <label className="flex items-center p-3 border border-onboarding-border-100 rounded-md bg-onboarding-background-200 hover:bg-onboarding-background-300 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="user_role"
+                    value="staff"
+                    checked={passwordFormData.user_role === "staff"}
+                    onChange={(e) => handleFormChange("user_role", e.target.value)}
+                    className="mr-3"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-onboarding-text-100">Staff</div>
+                    <div className="text-sm text-onboarding-text-300">Team member with access to projects and collaboration</div>
+                  </div>
+                </label>
+                
+                <label className="flex items-center p-3 border border-onboarding-border-100 rounded-md bg-onboarding-background-200 hover:bg-onboarding-background-300 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="user_role"
+                    value="manager"
+                    checked={passwordFormData.user_role === "manager"}
+                    onChange={(e) => handleFormChange("user_role", e.target.value)}
+                    className="mr-3"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-onboarding-text-100">Manager</div>
+                    <div className="text-sm text-onboarding-text-300">Team leader with user management and project oversight</div>
+                  </div>
+                </label>
+                
+                <label className="flex items-center p-3 border border-onboarding-border-100 rounded-md bg-onboarding-background-200 hover:bg-onboarding-background-300 cursor-pointer transition-colors">
+                  <input
+                    type="radio"
+                    name="user_role"
+                    value="guest"
+                    checked={passwordFormData.user_role === "guest"}
+                    onChange={(e) => handleFormChange("user_role", e.target.value)}
+                    className="mr-3"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium text-onboarding-text-100">Guest</div>
+                    <div className="text-sm text-onboarding-text-300">Limited access for external collaborators</div>
+                  </div>
+                </label>
+              </div>
+            </div>
           </div>
         )}
 

@@ -19,6 +19,7 @@ class EmailProvider(CredentialAdapter):
         self.key = key
         self.code = code
         self.is_signup = is_signup
+        self.user_role = request.POST.get("user_role", "staff")  # Default to staff if not provided
 
         (ENABLE_EMAIL_PASSWORD,) = get_configuration_value(
             [
@@ -55,6 +56,7 @@ class EmailProvider(CredentialAdapter):
                         "last_name": "",
                         "provider_id": "",
                         "is_password_autoset": False,
+                        "user_role": self.user_role,
                     },
                 }
             )

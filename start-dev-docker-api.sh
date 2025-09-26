@@ -70,6 +70,12 @@ docker-compose run --rm -d -p 8000:8000 \
     -e EMAIL_FROM="Plane Team <noreply@plane.so>" \
     -e ENABLE_MAGIC_LINK_LOGIN="0" \
     -e DJANGO_SETTINGS_MODULE="plane.settings.production" \
+    -e USE_MINIO="1" \
+    -e AWS_S3_ENDPOINT_URL="http://plane-minio:9000" \
+    -e AWS_ACCESS_KEY_ID="plane" \
+    -e AWS_SECRET_ACCESS_KEY="plane123" \
+    -e AWS_S3_BUCKET_NAME="uploads" \
+    -e AWS_S3_REGION_NAME="us-east-1" \
     --name plane-api-dev \
     api python manage.py runserver 0.0.0.0:8000
 

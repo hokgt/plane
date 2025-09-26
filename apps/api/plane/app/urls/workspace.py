@@ -1,6 +1,6 @@
 from django.urls import path
 
-
+from plane.app.views.workspace.remove_manager import remove_manager
 from plane.app.views import (
     UserWorkspaceInvitationsViewSet,
     WorkSpaceViewSet,
@@ -33,6 +33,7 @@ from plane.app.views import (
     WorkspaceStickyViewSet,
     WorkspaceUserPreferenceViewSet,
 )
+from plane.app.views.workspace.member import WorkspaceMemberDirectAddEndpoint
 
 
 urlpatterns = [
@@ -82,6 +83,11 @@ urlpatterns = [
         name="workspace-join",
     ),
     # user join workspace
+    path(
+        "workspaces/<str:slug>/members/add-direct/",
+        WorkspaceMemberDirectAddEndpoint.as_view(),
+        name="workspace-member-direct-add",
+    ),
     path(
         "workspaces/<str:slug>/members/",
         WorkSpaceMemberViewSet.as_view({"get": "list"}),
@@ -269,5 +275,10 @@ urlpatterns = [
         "workspaces/<str:slug>/sidebar-preferences/<str:key>/",
         WorkspaceUserPreferenceViewSet.as_view(),
         name="workspace-user-preference",
+    ),
+    path(
+        "workspaces/<str:workspace_slug>/members/<str:member_id>/remove-manager/",
+        remove_manager,
+        name="remove-manager",
     ),
 ]

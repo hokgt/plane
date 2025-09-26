@@ -15,6 +15,9 @@ from plane.settings.redis import redis_instance
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "plane.settings.production")
 
 ri = redis_instance()
+if ri is None:
+    # Skip Redis initialization if not configured
+    pass
 
 app = Celery("plane")
 

@@ -157,9 +157,11 @@ class Adapter:
             avatar = self.user_data.get("user", {}).get("avatar", "")
             first_name = self.user_data.get("user", {}).get("first_name", "")
             last_name = self.user_data.get("user", {}).get("last_name", "")
+            user_role = self.user_data.get("user", {}).get("user_role", "staff")
             user.avatar = avatar if avatar else ""
             user.first_name = first_name if first_name else ""
             user.last_name = last_name if last_name else ""
+            user.user_role = user_role
             user.save()
 
             # Create profile

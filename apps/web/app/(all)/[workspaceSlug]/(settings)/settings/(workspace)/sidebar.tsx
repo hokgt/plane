@@ -61,12 +61,21 @@ export const WorkspaceSettingsSidebar = (props: TWorkspaceSettingsSidebarProps) 
           ? pathname === `/${workspaceSlug}${data.href}/`
           : new RegExp(`^/${workspaceSlug}${data.href}/`).test(pathname)
       }
-      shouldRender={(data: { key: string; access?: EUserWorkspaceRoles[] | undefined }) =>
-        data.access
+      shouldRender={(data: { key: string; access?: EUserWorkspaceRoles[] | undefined }) => {
+        if (data.key === 'user-management') {
+          console.log('Sidebar - User Management render check:', {
+            key: data.key,
+            access: data.access,
+            workspaceSlug: workspaceSlug.toString(),
+            shouldRender: shouldRenderSettingLink(workspaceSlug.toString(), data.key),
+            hasPermission: allowPermissions(data.access || [], EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())
+          });
+        }
+        return data.access
           ? shouldRenderSettingLink(workspaceSlug.toString(), data.key) &&
             allowPermissions(data.access, EUserPermissionsLevel.WORKSPACE, workspaceSlug.toString())
-          : false
-      }
+          : false;
+      }}
       actionIcons={WorkspaceActionIcons}
     />
   );

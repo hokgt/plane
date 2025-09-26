@@ -153,6 +153,20 @@ export class WorkspaceService extends APIService {
       });
   }
 
+  async addMemberDirectly(workspaceSlug: string, data: {
+    email: string;
+    display_name?: string;
+    first_name?: string;
+    last_name?: string;
+    role?: number;
+  }): Promise<any> {
+    return this.post(`/api/workspaces/${workspaceSlug}/members/add-direct/`, data)
+      .then((response) => response?.data)
+      .catch((error) => {
+        throw error?.response?.data;
+      });
+  }
+
   async workspaceInvitations(workspaceSlug: string): Promise<IWorkspaceMemberInvitation[]> {
     return this.get(`/api/workspaces/${workspaceSlug}/invitations/`)
       .then((response) => response?.data)

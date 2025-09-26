@@ -2,6 +2,9 @@
 from django.db.models import Count, Q, OuterRef, Subquery, IntegerField
 from django.utils import timezone
 from django.db.models.functions import Coalesce
+from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
+from django.core.validators import validate_email
 
 # Third party modules
 from rest_framework import status
@@ -17,10 +20,12 @@ from plane.app.serializers import (
     WorkSpaceMemberSerializer,
 )
 from plane.app.views.base import BaseAPIView
-from plane.db.models import Project, ProjectMember, WorkspaceMember, DraftIssue
+from plane.db.models import Project, ProjectMember, WorkspaceMember, DraftIssue, Workspace
 from plane.utils.cache import invalidate_cache
 
 from .. import BaseViewSet
+
+User = get_user_model()
 
 
 class WorkSpaceMemberViewSet(BaseViewSet):
@@ -272,3 +277,148 @@ class WorkspaceProjectMemberEndpoint(BaseAPIView):
             project_members_dict[str(project_id)].append(project_member)
 
         return Response(project_members_dict, status=status.HTTP_200_OK)
+
+
+class WorkspaceMemberDirectAddEndpoint(BaseAPIView):
+    """
+    Endpoint for directly adding members to workspace without requiring them to register
+    """
+    
+    @invalidate_cache(
+        path="/api/workspaces/:slug/members/",
+        url_params=True,
+        user=False,
+        multiple=True,
+    )
+    @allow_permission(allowed_roles=[ROLE.ADMIN, ROLE.MEMBER], level="WORKSPACE")
+    def post(self, request, slug):
+        try:
+            # Get workspace
+            workspace = Workspace.objects.get(slug=slug)
+            
+            # Debug logging
+            print(f"DEBUG: Adding member to workspace {slug}")
+            print(f"DEBUG: Request data: {request.data}")
+            print(f"DEBUG: User: {request.user}")
+            print(f"DEBUG: Workspace: {workspace}")
+            
+            # Get request data
+            email = request.data.get("email", "").strip().lower()
+            display_name = request.data.get("display_name", "").strip()
+            first_name = request.data.get("first_name", "").strip()
+            last_name = request.data.get("last_name", "").strip()
+            role = request.data.get("role", 5)  # Default to guest role
+            
+            # Validate email
+            if not email:
+                return Response(
+                    {"error": "Email is required"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            try:
+                validate_email(email)
+            except ValidationError:
+                return Response(
+                    {"error": "Invalid email format"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            
+            # Check if user already exists
+            existing_user = User.objects.filter(email=email).first()
+            
+            if existing_user:
+                # User exists, check if they're already a member
+                existing_member = WorkspaceMember.objects.filter(
+                    workspace=workspace,
+                    member=existing_user,
+                    is_active=True
+                ).first()
+                
+                if existing_member:
+                    return Response(
+                        {"error": "User is already a member of this workspace"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                
+                # Add existing user to workspace
+                workspace_member = WorkspaceMember.objects.create(
+                    workspace=workspace,
+                    member=existing_user,
+                    role=role,
+                    created_by=request.user,
+                )
+                
+                serializer = WorkSpaceMemberSerializer(workspace_member)
+                return Response(
+                    {
+                        "message": "Existing user added to workspace successfully",
+                        "member": serializer.data
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+            
+            else:
+                # Create new user
+                if not display_name:
+                    display_name = email.split('@')[0]  # Use email prefix as display name
+                
+                # Generate username from email
+                username = email.split('@')[0]
+                # Ensure username is unique
+                counter = 1
+                original_username = username
+                while User.objects.filter(username=username).exists():
+                    username = f"{original_username}{counter}"
+                    counter += 1
+                
+                # Generate a temporary password
+                import secrets
+                import string
+                temp_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
+                
+                # Create user with minimal required fields
+                new_user = User.objects.create(
+                    email=email,
+                    username=username,
+                    display_name=display_name,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_active=True,
+                    is_email_verified=True,  # Since they're being added directly
+                    is_password_autoset=True,  # They'll need to set password on first login
+                )
+                
+                # Set the temporary password
+                new_user.set_password(temp_password)
+                new_user.save()
+                
+                # Add user to workspace
+                workspace_member = WorkspaceMember.objects.create(
+                    workspace=workspace,
+                    member=new_user,
+                    role=role,
+                    created_by=request.user,
+                )
+                
+                serializer = WorkSpaceMemberSerializer(workspace_member)
+                return Response(
+                    {
+                        "message": "New user created and added to workspace successfully",
+                        "member": serializer.data,
+                        "temporary_password": temp_password,
+                        "note": "Please share this temporary password with the user. They should change it on first login."
+                    },
+                    status=status.HTTP_201_CREATED,
+                )
+                
+        except Workspace.DoesNotExist:
+            return Response(
+                {"error": "Workspace not found"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to add member: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
