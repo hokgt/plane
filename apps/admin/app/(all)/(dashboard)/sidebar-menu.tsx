@@ -3,7 +3,7 @@
 import { observer } from "mobx-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Image, BrainCog, Cog, Lock, Mail, Users } from "lucide-react";
+import { Image, BrainCog, Cog, Lock, Mail, Users, Building2 } from "lucide-react";
 // plane internal packages
 import { Tooltip, WorkspaceIcon } from "@plane/ui";
 import { cn } from "@plane/utils";
@@ -28,6 +28,12 @@ const INSTANCE_ADMIN_LINKS = [
     name: "User Management",
     description: "Manage user roles and permissions.",
     href: `/users/`,
+  },
+  {
+    Icon: Building2,
+    name: "Company Management",
+    description: "Manage companies and their users.",
+    href: `/companies/`,
   },
   {
     Icon: Mail,

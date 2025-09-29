@@ -10,8 +10,8 @@ from django.contrib.auth.models import User
 
 class UserRole(Enum):
     """User role enumeration"""
-    GOD_ADMIN = 'admin'
-    MANAGER = 'admin'  # Manager uses admin role but with different permissions
+    OWNER = 'owner'
+    MANAGER = 'manager'
     STAFF = 'staff'
     GUEST = 'user'
 
@@ -53,7 +53,7 @@ class Permission(Enum):
 
 # Role-based permission mapping
 ROLE_PERMISSIONS = {
-    UserRole.GOD_ADMIN: [
+    UserRole.OWNER: [
         # Full system access - can change manager roles
         Permission.VIEW_ALL_USERS,
         Permission.MANAGE_USERS,
@@ -73,7 +73,6 @@ ROLE_PERMISSIONS = {
         Permission.DELETE_ISSUES,
         Permission.ASSIGN_ISSUES,
         Permission.ACCESS_ADMIN_PANEL,
-        Permission.MANAGE_SYSTEM_SETTINGS,
         Permission.VIEW_SYSTEM_LOGS,
     ],
     
@@ -91,7 +90,7 @@ ROLE_PERMISSIONS = {
         Permission.CREATE_ISSUES,
         Permission.EDIT_ISSUES,
         Permission.ASSIGN_ISSUES,
-        # Cannot change user roles (only god-admin can)
+        # Cannot change user roles (only owner can)
     ],
     
     UserRole.STAFF: [
@@ -194,7 +193,7 @@ def get_available_roles_for_registration() -> List[Dict[str, Any]]:
             'permissions': ['view_team_members', 'create_issues', 'edit_issues']
         },
         {
-            'value': 'admin',
+            'value': 'manager',
             'label': 'Manager',
             'description': 'Can see User Management tab, can invite team members',
             'permissions': ['view_all_users', 'invite_users', 'manage_team_members', 'create_projects', 'manage_projects']

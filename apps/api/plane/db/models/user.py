@@ -87,7 +87,6 @@ class User(AbstractBaseUser, PermissionsMixin):
     USER_ROLE_CHOICES = (
         ('owner', 'Owner'),
         ('manager', 'Manager'),
-        ('admin', 'Admin'),
         ('staff', 'Staff'),
         ('user', 'User'),
         ('guest', 'Guest'),
@@ -97,6 +96,17 @@ class User(AbstractBaseUser, PermissionsMixin):
         choices=USER_ROLE_CHOICES, 
         default='staff',
         help_text="User role for system-wide permissions"
+    )
+    
+    # Company relationship - users can belong to multiple companies
+    # Primary company is the main company the user works for
+    primary_company = models.ForeignKey(
+        'db.Company',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="primary_company_users",
+        help_text="Primary company this user belongs to"
     )
 
     # random token generated
@@ -188,6 +198,65 @@ class User(AbstractBaseUser, PermissionsMixin):
         else:
             # Guest has very limited permissions
             return permission in ['view_own_data', 'view_issues']
+    
+    # Company-related methods
+    def get_companies(self):
+        """Get all companies this user belongs to"""
+        from .company import CompanyUser
+        return CompanyUser.objects.filter(
+            user=self, 
+            is_active=True,
+            deleted_at__isnull=True
+        ).select_related('company')
+    
+    def get_managed_companies(self):
+        """Get all companies this user manages"""
+        from .company import Company
+        return Company.objects.filter(
+            manager=self,
+            is_active=True,
+            deleted_at__isnull=True
+        )
+    
+    def is_company_manager(self, company):
+        """Check if user is manager of a specific company"""
+        from .company import CompanyUser
+        try:
+            company_user = CompanyUser.objects.get(
+                user=self,
+                company=company,
+                is_active=True,
+                deleted_at__isnull=True
+            )
+            return company_user.is_manager()
+        except CompanyUser.DoesNotExist:
+            return False
+    
+    def can_manage_company_users(self, company):
+        """Check if user can manage users in a specific company"""
+        # Owner can manage all companies
+        if self.is_owner():
+            return True
+        
+        # Manager can manage their own companies
+        if self.is_company_manager(company):
+            return True
+            
+        return False
+    
+    def get_company_role(self, company):
+        """Get user's role in a specific company"""
+        from .company import CompanyUser
+        try:
+            company_user = CompanyUser.objects.get(
+                user=self,
+                company=company,
+                is_active=True,
+                deleted_at__isnull=True
+            )
+            return company_user.role
+        except CompanyUser.DoesNotExist:
+            return None
 
     @property
     def avatar_url(self):

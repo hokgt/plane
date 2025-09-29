@@ -59,9 +59,19 @@ class UserManagementEndpoint(BaseAPIView):
         search = request.GET.get('search', '')
         role = request.GET.get('role', '')
         is_active = request.GET.get('is_active', '')
+        company_id = request.GET.get('company_id', '')
         
         # Build query
         queryset = User.objects.all()
+        
+        # Company filtering - only show users from companies the admin can manage
+        if not request.user.is_owner():
+            # For managers, only show users from their companies
+            managed_companies = request.user.get_managed_companies()
+            queryset = queryset.filter(
+                Q(primary_company__in=managed_companies) |
+                Q(user_companies__company__in=managed_companies)
+            ).distinct()
         
         if search:
             queryset = queryset.filter(
@@ -77,6 +87,13 @@ class UserManagementEndpoint(BaseAPIView):
             
         if is_active != '':
             queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        
+        # Company-specific filtering
+        if company_id:
+            queryset = queryset.filter(
+                Q(primary_company_id=company_id) |
+                Q(user_companies__company_id=company_id)
+            ).distinct()
         
         # Order by creation date
         queryset = queryset.order_by('-created_at')

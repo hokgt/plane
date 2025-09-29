@@ -2,6 +2,7 @@
 
 from django.conf import settings
 from django.urls import include, path, re_path
+from django.contrib import admin
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularRedocView,
@@ -11,6 +12,7 @@ from drf_spectacular.views import (
 handler404 = "plane.app.views.error_404.custom_404_view"
 
 urlpatterns = [
+    path("admin/", admin.site.urls),
     path("api/", include("plane.app.urls")),
     path("api/public/", include("plane.space.urls")),
     path("api/instances/", include("plane.license.urls")),

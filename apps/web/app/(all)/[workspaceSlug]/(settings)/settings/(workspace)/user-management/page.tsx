@@ -17,7 +17,12 @@ import {
   Calendar,
   Filter,
   Crown,
-  Copy
+  Copy,
+  Building2,
+  Plus,
+  Settings,
+  Trash2,
+  Edit
 } from "lucide-react";
 // import { IWorkspaceMember } from "@plane/types";
 
@@ -42,6 +47,43 @@ interface IWorkspaceMember {
   display_name?: string;
   last_login_medium?: string;
   is_active?: boolean;
+}
+
+// Company management interfaces
+interface ICompany {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  is_active: boolean;
+  max_users: number;
+  primary_color: string;
+  logo_url?: string;
+  manager_email: string;
+  manager_display_name: string;
+  current_user_count: number;
+  can_add_users: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ICompanyUser {
+  id: string;
+  company: string;
+  user: string;
+  role: 'manager' | 'staff' | 'guest';
+  is_active: boolean;
+  joined_at: string;
+  company_display_name?: string;
+  company_role_title?: string;
+  user_email: string;
+  user_display_name: string;
+  user_first_name?: string;
+  user_last_name?: string;
+  user_avatar?: string;
+  company_name: string;
+  created_at: string;
+  updated_at: string;
 }
 import { Button, Input, Avatar, CustomSelect, CustomMenu } from "@plane/ui";
 import { PageHead } from "@/components/core";
@@ -76,6 +118,31 @@ const UserManagementPage = observer(() => {
   const [addRole, setAddRole] = useState("15"); // Default to Member (staff)
   const [addLoading, setAddLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Company management state
+  const [activeTab, setActiveTab] = useState<'workspace' | 'companies'>('workspace');
+  const [companies, setCompanies] = useState<ICompany[]>([]);
+  const [companyUsers, setCompanyUsers] = useState<ICompanyUser[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState<ICompany | null>(null);
+  
+  // Company creation form
+  const [showCreateCompanyModal, setShowCreateCompanyModal] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [companyDescription, setCompanyDescription] = useState("");
+  const [maxUsers, setMaxUsers] = useState(50);
+  const [primaryColor, setPrimaryColor] = useState("#3B82F6");
+  const [createLoading, setCreateLoading] = useState(false);
+  
+  // Company user management
+  const [showCompanyUsersModal, setShowCompanyUsersModal] = useState(false);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [addUserEmail, setAddUserEmail] = useState("");
+  const [addUserDisplayName, setAddUserDisplayName] = useState("");
+  const [addUserFirstName, setAddUserFirstName] = useState("");
+  const [addUserLastName, setAddUserLastName] = useState("");
+  const [addUserRole, setAddUserRole] = useState("staff");
+  const [addUserRoleTitle, setAddUserRoleTitle] = useState("");
+  const [addUserLoading, setAddUserLoading] = useState(false);
   
   // Password modal state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -127,6 +194,164 @@ const UserManagementPage = observer(() => {
       case 10: return 'staff';
       case 5: return 'guest';
       default: return 'guest';
+    }
+  };
+
+  // Company management functions
+  const fetchCompanies = async () => {
+    try {
+      const response = await fetch('/api/companies/', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompanies(data);
+      } else {
+        setError('Failed to fetch companies');
+      }
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      setError('Failed to fetch companies');
+    }
+  };
+
+  const createCompany = async () => {
+    if (!companyName.trim()) {
+      setError("Please enter a company name");
+      return;
+    }
+
+    setCreateLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/companies/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: companyName.trim(),
+          description: companyDescription.trim() || undefined,
+          max_users: maxUsers,
+          primary_color: primaryColor,
+        }),
+      });
+
+      if (response.ok) {
+        const newCompany = await response.json();
+        setCompanies([...companies, newCompany]);
+        
+        // Reset form and close modal
+        setCompanyName("");
+        setCompanyDescription("");
+        setMaxUsers(50);
+        setPrimaryColor("#3B82F6");
+        setShowCreateCompanyModal(false);
+        
+        console.log("Company created successfully!");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to create company");
+      }
+    } catch (error) {
+      console.error('Error creating company:', error);
+      setError("Failed to create company. Please try again.");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
+  const fetchCompanyUsers = async (companyId: string) => {
+    try {
+      const response = await fetch(`/api/companies/${companyId}/users/`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setCompanyUsers(data);
+      } else {
+        setError('Failed to fetch company users');
+      }
+    } catch (error) {
+      console.error('Error fetching company users:', error);
+      setError('Failed to fetch company users');
+    }
+  };
+
+  const addUserToCompany = async () => {
+    if (!addUserEmail.trim()) {
+      setError("Please enter an email address");
+      return;
+    }
+
+    if (!selectedCompany) {
+      setError("No company selected");
+      return;
+    }
+
+    setAddUserLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/companies/${selectedCompany.id}/users/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: addUserEmail.trim().toLowerCase(),
+          display_name: addUserDisplayName.trim() || undefined,
+          first_name: addUserFirstName.trim() || undefined,
+          last_name: addUserLastName.trim() || undefined,
+          role: addUserRole,
+          company_role_title: addUserRoleTitle.trim() || undefined,
+        }),
+      });
+
+      if (response.ok) {
+        const newUser = await response.json();
+        setCompanyUsers([...companyUsers, newUser]);
+        
+        // Refresh companies to update user count
+        await fetchCompanies();
+        
+        // Reset form
+        setAddUserEmail("");
+        setAddUserDisplayName("");
+        setAddUserFirstName("");
+        setAddUserLastName("");
+        setAddUserRole("staff");
+        setAddUserRoleTitle("");
+        setShowAddUserModal(false);
+        
+        // Show success message with temporary password if provided
+        if (newUser.temporary_password) {
+          setTemporaryPassword(newUser.temporary_password);
+          setNewMemberEmail(addUserEmail);
+          setShowPasswordModal(true);
+        }
+        
+        console.log("User added to company successfully!");
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || "Failed to add user to company");
+      }
+    } catch (error) {
+      console.error('Error adding user to company:', error);
+      setError("Failed to add user to company. Please try again.");
+    } finally {
+      setAddUserLoading(false);
     }
   };
 
@@ -288,7 +513,7 @@ const UserManagementPage = observer(() => {
         filteredMembers = filteredMembers.filter(member => member.role === roleValue);
       }
 
-      setMembers(filteredMembers);
+      setMembers(filteredMembers as IWorkspaceMember[]);
     } catch (error: any) {
       console.error('Error fetching members:', error);
       if (error?.status === 403) {
@@ -504,7 +729,11 @@ const UserManagementPage = observer(() => {
 
   useEffect(() => {
     fetchMembers();
-  }, [searchTerm, roleFilter, workspaceSlug]);
+    // Load companies if user has admin/manager role
+    if ((currentUser?.user_role as string) === 'owner' || (currentUser?.user_role as string) === 'manager') {
+      fetchCompanies();
+    }
+  }, [searchTerm, roleFilter, workspaceSlug, currentUser?.user_role]);
 
   // Fetch workspace user info if not loaded
   useEffect(() => {
@@ -555,127 +784,180 @@ const UserManagementPage = observer(() => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-custom-text-100">User Management</h1>
-            <p className="text-custom-text-400 mt-1">Manage workspace members and their permissions</p>
+            <p className="text-custom-text-400 mt-1">
+              {activeTab === 'workspace' 
+                ? 'Manage workspace members and their permissions'
+                : 'Manage companies and organization structure'
+              }
+            </p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
-              size="sm"
-            >
-              <UserCheck className="h-4 w-4" />
-              Add Member
-            </Button>
-            <Button
-              onClick={() => setShowInviteModal(true)}
-              className="flex items-center gap-2 bg-custom-primary hover:bg-custom-primary/90"
-              size="sm"
-            >
-              <UserPlus className="h-4 w-4" />
-              Invite Member
-            </Button>
+            {activeTab === 'workspace' ? (
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => setShowAddModal(true)}
+                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                  size="sm"
+                >
+                  <UserCheck className="h-4 w-4" />
+                  Add Member
+                </Button>
+                <Button
+                  onClick={() => setShowInviteModal(true)}
+                  className="flex items-center gap-2 bg-custom-primary hover:bg-custom-primary/90"
+                  size="sm"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Invite Member
+                </Button>
+              </div>
+            ) : (
+              <Button
+                onClick={() => setShowCreateCompanyModal(true)}
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                size="sm"
+              >
+                <Plus className="h-4 w-4" />
+                Create Company
+              </Button>
+            )}
           </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-custom-primary/10 rounded-lg">
-                <Users className="h-5 w-5 text-custom-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-custom-text-400">Total Members</p>
-                <p className="text-2xl font-semibold text-custom-text-100">{members?.length || 0}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-500/10 rounded-lg">
-                <Shield className="h-5 w-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-sm text-custom-text-400">Managers</p>
-                <p className="text-2xl font-semibold text-custom-text-100">{members?.filter(m => m.role >= 15).length || 0}</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-500/10 rounded-lg">
-                <UserCheck className="h-5 w-5 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-sm text-custom-text-400">Active</p>
-                <p className="text-2xl font-semibold text-custom-text-100">{members?.filter(m => m.is_active).length || 0}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Controls Section */}
-        <div className="bg-custom-background-100 rounded-lg border border-custom-border-200">
-          <div className="p-6">
-            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-              <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                <div className="relative flex-1 max-w-md">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-custom-text-400" />
-                  <Input
-                    placeholder="Search members by name or email..."
-                    value={searchTerm}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
-                    className="pl-10 bg-custom-background-80 border-custom-border-200 focus:border-custom-primary focus:ring-custom-primary"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-custom-text-400" />
-                  <CustomSelect
-                    value={roleFilter}
-                    onChange={(value: string) => setRoleFilter(value)}
-                    label="All Roles"
-                    className="min-w-[140px]"
-                  >
-                    <CustomSelect.Option value="">All Roles</CustomSelect.Option>
-                    <CustomSelect.Option value="admin">👑 Admin</CustomSelect.Option>
-                    <CustomSelect.Option value="manager">👨‍💼 Manager</CustomSelect.Option>
-                    <CustomSelect.Option value="staff">👤 Staff</CustomSelect.Option>
-                    <CustomSelect.Option value="guest">👥 Guest</CustomSelect.Option>
-                  </CustomSelect>
-                </div>
-              </div>
+        {/* Tab Navigation */}
+        {((currentUser?.user_role as string) === 'owner' || (currentUser?.user_role as string) === 'manager') && (
+          <div className="flex items-center gap-2 border-b border-custom-border-200">
+            <button
+              onClick={() => setActiveTab('workspace')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'workspace'
+                  ? 'border-custom-primary text-custom-primary'
+                  : 'border-transparent text-custom-text-400 hover:text-custom-text-300'
+              }`}
+            >
               <div className="flex items-center gap-2">
-                <div className="flex items-center bg-custom-background-80 rounded-lg p-1">
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-2 rounded-md transition-colors ${
-                      viewMode === 'grid' ? 'bg-custom-background-80 shadow-sm' : 'hover:bg-custom-background-80'
-                    }`}
-                  >
-                    <div className="w-4 h-4 grid grid-cols-2 gap-0.5">
-                      <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                      <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                      <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                      <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                    </div>
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-2 rounded-md transition-colors ${
-                      viewMode === 'list' ? 'bg-custom-background-80 shadow-sm' : 'hover:bg-custom-background-80'
-                    }`}
-                  >
-                    <div className="w-4 h-4 space-y-0.5">
-                      <div className={`w-full h-1 rounded-sm ${viewMode === 'list' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                      <div className={`w-full h-1 rounded-sm ${viewMode === 'list' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                      <div className={`w-full h-1 rounded-sm ${viewMode === 'list' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
-                    </div>
-                  </button>
+                <Users className="h-4 w-4" />
+                Workspace Members
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('companies')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'companies'
+                  ? 'border-custom-primary text-custom-primary'
+                  : 'border-transparent text-custom-text-400 hover:text-custom-text-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="h-4 w-4" />
+                Company Management
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Content based on active tab */}
+        {activeTab === 'workspace' ? (
+          <div>
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-custom-primary/10 rounded-lg">
+                    <Users className="h-5 w-5 text-custom-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-custom-text-400">Total Members</p>
+                    <p className="text-2xl font-semibold text-custom-text-100">{members?.length || 0}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <Shield className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-custom-text-400">Managers</p>
+                    <p className="text-2xl font-semibold text-custom-text-100">{members?.filter(m => m.role >= 15).length || 0}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <UserCheck className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-custom-text-400">Active</p>
+                    <p className="text-2xl font-semibold text-custom-text-100">{members?.filter(m => m.is_active).length || 0}</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
+
+            {/* Controls Section */}
+            <div className="bg-custom-background-100 rounded-lg border border-custom-border-200">
+              <div className="p-6">
+                <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                  <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                    <div className="relative flex-1 max-w-md">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-custom-text-400" />
+                      <Input
+                        placeholder="Search members by name or email..."
+                        value={searchTerm}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
+                        className="pl-10 bg-custom-background-80 border-custom-border-200 focus:border-custom-primary focus:ring-custom-primary"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-custom-text-400" />
+                      <CustomSelect
+                        value={roleFilter}
+                        onChange={(value: string) => setRoleFilter(value)}
+                        label="All Roles"
+                        className="min-w-[140px]"
+                      >
+                        <CustomSelect.Option value="">All Roles</CustomSelect.Option>
+                        <CustomSelect.Option value="admin">👑 Admin</CustomSelect.Option>
+                        <CustomSelect.Option value="manager">👨‍💼 Manager</CustomSelect.Option>
+                        <CustomSelect.Option value="staff">👤 Staff</CustomSelect.Option>
+                        <CustomSelect.Option value="guest">👥 Guest</CustomSelect.Option>
+                      </CustomSelect>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center bg-custom-background-80 rounded-lg p-1">
+                      <button
+                        onClick={() => setViewMode('grid')}
+                        className={`p-2 rounded-md transition-colors ${
+                          viewMode === 'grid' ? 'bg-custom-background-80 shadow-sm' : 'hover:bg-custom-background-80'
+                        }`}
+                      >
+                        <div className="w-4 h-4 grid grid-cols-2 gap-0.5">
+                          <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                          <div className={`w-1.5 h-1.5 rounded-sm ${viewMode === 'grid' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                        </div>
+                      </button>
+                      <button
+                        onClick={() => setViewMode('list')}
+                        className={`p-2 rounded-md transition-colors ${
+                          viewMode === 'list' ? 'bg-custom-background-80 shadow-sm' : 'hover:bg-custom-background-80'
+                        }`}
+                      >
+                        <div className="w-4 h-4 space-y-0.5">
+                          <div className={`w-full h-1 rounded-sm ${viewMode === 'list' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                          <div className={`w-full h-1 rounded-sm ${viewMode === 'list' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                          <div className={`w-full h-1 rounded-sm ${viewMode === 'list' ? 'bg-custom-primary' : 'bg-custom-text-400'}`} />
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
 
         {/* Error Display */}
         {error && (
@@ -688,19 +970,19 @@ const UserManagementPage = observer(() => {
                 <h3 className="text-sm font-semibold text-red-800">Error</h3>
                 <div className="mt-1 text-sm text-red-700">{error}</div>
               </div>
-              </div>
             </div>
+          </div>
         )}
 
         {/* Members Section */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
-              <div className="text-center">
+            <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
               <p className="mt-4 text-gray-500">Loading members...</p>
-              </div>
             </div>
-          ) : (
+          </div>
+        ) : (
           <div className="space-y-6">
             {viewMode === 'grid' ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -816,21 +1098,21 @@ const UserManagementPage = observer(() => {
                             <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getRoleBadgeClasses(member.role)}`}>
                               {getRoleString(member.role)}
                             </span>
-                          </div>
-                          <div className="flex items-center gap-4 mt-1">
+                        </div>
+                        <div className="flex items-center gap-4 mt-1">
                             <div className="flex items-center gap-1">
                               <Mail className="h-3 w-3 text-gray-400" />
                               <p className="text-sm text-gray-500 truncate">{member.member.email}</p>
-                        </div>
+                            </div>
                             <div className="flex items-center gap-1">
                               <Calendar className="h-3 w-3 text-gray-400" />
                               <p className="text-xs text-gray-500">
-                          Joined {member.created_at ? new Date(member.created_at).toLocaleDateString() : 'Unknown'}
-                        </p>
+                                Joined {member.created_at ? new Date(member.created_at).toLocaleDateString() : 'Unknown'}
+                              </p>
                             </div>
                           </div>
+                        </div>
                       </div>
-                    </div>
 
                       <div className="flex items-center space-x-3">
                       <CustomSelect
@@ -847,7 +1129,7 @@ const UserManagementPage = observer(() => {
 
                       <CustomMenu
                         customButton={
-                            <Button variant="link-neutral" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button variant="link-neutral" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         }
@@ -860,14 +1142,14 @@ const UserManagementPage = observer(() => {
                           </div>
                         </CustomMenu.MenuItem>
                         {canRemoveManager(getRoleString(member.role)) && (
-                            <CustomMenu.MenuItem onClick={() => removeManager(member.id)}>
+                          <CustomMenu.MenuItem onClick={() => removeManager(member.id)}>
                             <div className="flex items-center gap-2 text-red-600">
                               <UserX className="h-4 w-4" />
                               Remove Manager
                             </div>
                           </CustomMenu.MenuItem>
                         )}
-                          <CustomMenu.MenuItem onClick={() => removeMember(member.id)}>
+                        <CustomMenu.MenuItem onClick={() => removeMember(member.id)}>
                           <div className="flex items-center gap-2">
                             <UserX className="h-4 w-4" />
                             Remove from workspace
@@ -883,10 +1165,180 @@ const UserManagementPage = observer(() => {
                       <p className="text-custom-text-400">No members match your current filters.</p>
                     </div>
                   )}
+                </div>
               </div>
             </div>
           )}
         </div>
+        ) : (
+          /* Company Management Content */
+          <div className="space-y-6">
+            {/* Company Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-custom-primary/10 rounded-lg">
+                    <Building2 className="h-5 w-5 text-custom-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-custom-text-400">Total Companies</p>
+                    <p className="text-2xl font-semibold text-custom-text-100">{companies?.length || 0}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <Users className="h-5 w-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-custom-text-400">Total Users</p>
+                    <p className="text-2xl font-semibold text-custom-text-100">
+                      {companies?.reduce((sum, company) => sum + company.current_user_count, 0) || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-custom-background-100 rounded-lg border border-custom-border-200 p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <Shield className="h-5 w-5 text-blue-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-custom-text-400">Active Companies</p>
+                    <p className="text-2xl font-semibold text-custom-text-100">
+                      {companies?.filter(c => c.is_active).length || 0}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Search and Filters */}
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <Input
+                    type="text"
+                    placeholder="Search companies..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Error Message */}
+            {error && (
+              <div className="rounded-md bg-red-50 p-4">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-red-400" />
+                  <div className="ml-3">
+                    <h3 className="text-sm font-medium text-red-800">Error</h3>
+                    <div className="mt-2 text-sm text-red-700">{error}</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Companies List */}
+            <div className="grid gap-4">
+              {companies?.filter(company =>
+                company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                company.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                company.manager_email.toLowerCase().includes(searchTerm.toLowerCase())
+              ).map((company) => (
+                <div key={company.id} className="rounded-lg border border-gray-200 bg-white p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div 
+                        className="flex h-12 w-12 items-center justify-center rounded-lg text-white font-semibold"
+                        style={{ backgroundColor: company.primary_color }}
+                      >
+                        {company.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-lg font-medium text-gray-900">{company.name}</h4>
+                          {!company.is_active && (
+                            <span className="rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                              Inactive
+                            </span>
+                          )}
+                        </div>
+                        {company.description && (
+                          <p className="mt-1 text-sm text-gray-600">{company.description}</p>
+                        )}
+                        <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Crown className="h-4 w-4" />
+                            {company.manager_display_name}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Users className="h-4 w-4" />
+                            {company.current_user_count}/{company.max_users} users
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="h-4 w-4" />
+                            Created {new Date(company.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="neutral-primary"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedCompany(company);
+                          setShowCompanyUsersModal(true);
+                          fetchCompanyUsers(company.id);
+                        }}
+                      >
+                        <Users className="h-4 w-4" />
+                        Manage Users
+                      </Button>
+                      <CustomMenu>
+                        <CustomMenu.MenuItem onClick={() => {
+                          // TODO: Implement edit functionality
+                          console.log("Edit company:", company.id);
+                        }}>
+                          <div className="flex items-center gap-2">
+                            <Edit className="h-4 w-4" />
+                            Edit Company
+                          </div>
+                        </CustomMenu.MenuItem>
+                        <CustomMenu.MenuItem onClick={() => {
+                          // TODO: Implement delete functionality
+                          console.log("Delete company:", company.id);
+                        }}>
+                          <div className="flex items-center gap-2 text-red-600 hover:text-red-700">
+                            <Trash2 className="h-4 w-4" />
+                            Delete Company
+                          </div>
+                        </CustomMenu.MenuItem>
+                        <Button variant="neutral-primary" size="sm">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </CustomMenu>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {companies?.length === 0 && (
+              <div className="text-center py-12">
+                <Building2 className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-4 text-lg font-medium text-gray-900">No companies found</h3>
+                <p className="mt-2 text-sm text-gray-500">
+                  {searchTerm ? "Try adjusting your search criteria." : "Get started by creating your first company."}
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Invite Member Modal */}
@@ -1407,6 +1859,266 @@ const UserManagementPage = observer(() => {
                     Got it!
                   </Button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Company Management Modals */}
+        
+        {/* Create Company Modal */}
+        {showCreateCompanyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6">
+              <h3 className="text-lg font-medium text-gray-900">Create Company</h3>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Company Name</label>
+                  <Input
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Enter company name"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Description</label>
+                  <textarea
+                    value={companyDescription}
+                    onChange={(e) => setCompanyDescription(e.target.value)}
+                    placeholder="Enter company description"
+                    className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                    rows={3}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Maximum Users</label>
+                  <Input
+                    type="number"
+                    value={maxUsers}
+                    onChange={(e) => setMaxUsers(parseInt(e.target.value) || 50)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Primary Color</label>
+                  <Input
+                    type="color"
+                    value={primaryColor}
+                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    className="mt-1 h-10 w-full"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  variant="neutral-primary"
+                  onClick={() => setShowCreateCompanyModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={createCompany}
+                  loading={createLoading}
+                >
+                  Create Company
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Company Users Modal */}
+        {showCompanyUsersModal && selectedCompany && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-4xl rounded-lg bg-white p-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Users in {selectedCompany.name}
+                </h3>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="neutral-primary"
+                    size="sm"
+                    onClick={() => setShowAddUserModal(true)}
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Add User
+                  </Button>
+                  <Button
+                    variant="neutral-primary"
+                    size="sm"
+                    onClick={() => setShowCompanyUsersModal(false)}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <div className="space-y-3">
+                  {companyUsers.map((user) => (
+                    <div key={user.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          name={user.user_display_name}
+                          src={user.user_avatar}
+                          size="md"
+                        />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-gray-900">
+                              {user.company_display_name || user.user_display_name}
+                            </span>
+                            <span className={`rounded-full px-2 py-1 text-xs font-medium ${
+                              user.role === 'manager' 
+                                ? 'bg-purple-100 text-purple-800'
+                                : user.role === 'staff'
+                                ? 'bg-blue-100 text-blue-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {user.role}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-600">{user.user_email}</p>
+                          {user.company_role_title && (
+                            <p className="text-sm text-gray-500">{user.company_role_title}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!user.is_active && (
+                          <span className="rounded-full bg-red-100 px-2 py-1 text-xs text-red-800">
+                            Inactive
+                          </span>
+                        )}
+                        <CustomMenu>
+                          <CustomMenu.MenuItem onClick={() => {
+                            // TODO: Implement edit functionality
+                            console.log("Edit user role:", user.id);
+                          }}>
+                            <div className="flex items-center gap-2">
+                              <Edit className="h-4 w-4" />
+                              Edit Role
+                            </div>
+                          </CustomMenu.MenuItem>
+                          <CustomMenu.MenuItem onClick={() => {
+                            // TODO: Implement remove functionality
+                            console.log("Remove user:", user.id);
+                          }}>
+                            <div className="flex items-center gap-2 text-red-600 hover:text-red-700">
+                              <UserX className="h-4 w-4" />
+                              Remove from Company
+                            </div>
+                          </CustomMenu.MenuItem>
+                          <Button variant="neutral-primary" size="sm">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </CustomMenu>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                
+                {companyUsers.length === 0 && (
+                  <div className="text-center py-8">
+                    <Users className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-4 text-lg font-medium text-gray-900">No users in this company</h3>
+                    <p className="mt-2 text-sm text-gray-500">
+                      Start by adding users to this company.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Add User to Company Modal */}
+        {showAddUserModal && selectedCompany && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+            <div className="w-full max-w-md rounded-lg bg-white p-6">
+              <h3 className="text-lg font-medium text-gray-900">Add User to {selectedCompany.name}</h3>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Email Address</label>
+                  <Input
+                    type="email"
+                    value={addUserEmail}
+                    onChange={(e) => setAddUserEmail(e.target.value)}
+                    placeholder="Enter email address"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Display Name</label>
+                  <Input
+                    type="text"
+                    value={addUserDisplayName}
+                    onChange={(e) => setAddUserDisplayName(e.target.value)}
+                    placeholder="Enter display name"
+                    className="mt-1"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">First Name</label>
+                    <Input
+                      type="text"
+                      value={addUserFirstName}
+                      onChange={(e) => setAddUserFirstName(e.target.value)}
+                      placeholder="First name"
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Last Name</label>
+                    <Input
+                      type="text"
+                      value={addUserLastName}
+                      onChange={(e) => setAddUserLastName(e.target.value)}
+                      placeholder="Last name"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Role in Company</label>
+                  <CustomSelect
+                    value={addUserRole}
+                    onChange={setAddUserRole}
+                    label="Select Role"
+                    className="mt-1"
+                  >
+                    <CustomSelect.Option value="staff">Staff</CustomSelect.Option>
+                    <CustomSelect.Option value="guest">Guest</CustomSelect.Option>
+                  </CustomSelect>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Job Title</label>
+                  <Input
+                    type="text"
+                    value={addUserRoleTitle}
+                    onChange={(e) => setAddUserRoleTitle(e.target.value)}
+                    placeholder="Enter job title"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                <Button
+                  variant="neutral-primary"
+                  onClick={() => setShowAddUserModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={addUserToCompany}
+                  loading={addUserLoading}
+                >
+                  Add User
+                </Button>
               </div>
             </div>
           </div>
