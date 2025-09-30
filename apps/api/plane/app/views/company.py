@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.viewsets import ModelViewSet
 from django.db.models import Q
 from django.contrib.auth import get_user_model
+from drf_spectacular.utils import OpenApiResponse
 
 # Module imports
 from plane.app.views.base import BaseAPIView

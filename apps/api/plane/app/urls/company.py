@@ -40,4 +40,3 @@ urlpatterns = [
         name="company-user-detail",
     ),
 ]
-

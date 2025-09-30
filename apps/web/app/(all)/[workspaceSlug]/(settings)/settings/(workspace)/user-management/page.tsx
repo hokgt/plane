@@ -1167,9 +1167,10 @@ const UserManagementPage = observer(() => {
                   )}
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
+          </div>
         ) : (
           /* Company Management Content */
           <div className="space-y-6">
@@ -1223,7 +1224,7 @@ const UserManagementPage = observer(() => {
                     type="text"
                     placeholder="Search companies..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
@@ -1877,7 +1878,7 @@ const UserManagementPage = observer(() => {
                   <Input
                     type="text"
                     value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCompanyName(e.target.value)}
                     placeholder="Enter company name"
                     className="mt-1"
                   />
@@ -1886,7 +1887,7 @@ const UserManagementPage = observer(() => {
                   <label className="block text-sm font-medium text-gray-700">Description</label>
                   <textarea
                     value={companyDescription}
-                    onChange={(e) => setCompanyDescription(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setCompanyDescription(e.target.value)}
                     placeholder="Enter company description"
                     className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
                     rows={3}
@@ -1897,7 +1898,7 @@ const UserManagementPage = observer(() => {
                   <Input
                     type="number"
                     value={maxUsers}
-                    onChange={(e) => setMaxUsers(parseInt(e.target.value) || 50)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setMaxUsers(parseInt(e.target.value) || 50)}
                     className="mt-1"
                   />
                 </div>
@@ -1906,7 +1907,7 @@ const UserManagementPage = observer(() => {
                   <Input
                     type="color"
                     value={primaryColor}
-                    onChange={(e) => setPrimaryColor(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPrimaryColor(e.target.value)}
                     className="mt-1 h-10 w-full"
                   />
                 </div>
@@ -2046,7 +2047,7 @@ const UserManagementPage = observer(() => {
                   <Input
                     type="email"
                     value={addUserEmail}
-                    onChange={(e) => setAddUserEmail(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddUserEmail(e.target.value)}
                     placeholder="Enter email address"
                     className="mt-1"
                   />
@@ -2056,7 +2057,7 @@ const UserManagementPage = observer(() => {
                   <Input
                     type="text"
                     value={addUserDisplayName}
-                    onChange={(e) => setAddUserDisplayName(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddUserDisplayName(e.target.value)}
                     placeholder="Enter display name"
                     className="mt-1"
                   />
@@ -2067,7 +2068,7 @@ const UserManagementPage = observer(() => {
                     <Input
                       type="text"
                       value={addUserFirstName}
-                      onChange={(e) => setAddUserFirstName(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddUserFirstName(e.target.value)}
                       placeholder="First name"
                       className="mt-1"
                     />
@@ -2077,7 +2078,7 @@ const UserManagementPage = observer(() => {
                     <Input
                       type="text"
                       value={addUserLastName}
-                      onChange={(e) => setAddUserLastName(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddUserLastName(e.target.value)}
                       placeholder="Last name"
                       className="mt-1"
                     />
@@ -2100,7 +2101,7 @@ const UserManagementPage = observer(() => {
                   <Input
                     type="text"
                     value={addUserRoleTitle}
-                    onChange={(e) => setAddUserRoleTitle(e.target.value)}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAddUserRoleTitle(e.target.value)}
                     placeholder="Enter job title"
                     className="mt-1"
                   />
